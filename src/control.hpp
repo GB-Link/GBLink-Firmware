@@ -6,13 +6,13 @@
 #include "module/emu.hpp"
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
+#include "module/rfuWireless.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
 #include "module/moduleInterface.hpp"
 #include "hardware.hpp"
 #include "persist.hpp"
-#include "firmware_version.hpp"
 
 class Control
 {
@@ -24,13 +24,19 @@ class Control
         GetFirmwareInfo = 0x0F
     };
 
+    // Firmware version: 2.4.1 (host-slot eviction clock-skew fix)
+    static constexpr uint8_t FW_VERSION_MAJOR = 2;
+    static constexpr uint8_t FW_VERSION_MINOR = 4;
+    static constexpr uint8_t FW_VERSION_PATCH = 1;
+
     enum class Mode
     {
         gbaTradeEmu = 0x00,
         gbaLink = 0x01,
         gbLink = 0x02,
         gbPrinter = 0x03,
-        advanceWars = 0x04
+        advanceWars = 0x04,
+        rfuWireless = 0x05
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -118,6 +124,32 @@ public:
                                    : awproto::GameVariant::aw1);
                 m_currentModule = &advanceWarsModule;
                 advanceWarsModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            case Mode::rfuWireless:
+            {
+                applyLedForSlot(LED_SLOT_RFU);
+                link_detectCableType();
+
+                // RFU needs the full-duplex SO/SI pair, which only the GBC
+                // cable wiring provides (the GBA cable grounds GP1).
+                if (link_isGbaCable())
+                {
+                    sendLinkStatus(LinkStatus::WrongCable);
+                    break;
+                }
+
+                Transport::registerDataHandler(rfuProto_receiveHandler, nullptr);
+
+                // The SetMode variant carries the Union-Room role lock: 0 =
+                // symmetric (solo bring-up, no suppression), 1 = host-lock,
+                // 2 = client-lock (breaks the mesh deadlock for a 2-peer trade).
+                RfuWirelessModule rfuModule(awVariant);
+                m_currentModule = &rfuModule;
+                rfuModule.execute();
 
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
@@ -269,9 +301,9 @@ private:
     {
         const uint8_t info[] = {
             0x0F, // Echo back the command ID so web app knows this is a firmware info response
-            fw::versionMajor,
-            fw::versionMinor,
-            fw::versionPatch,
+            FW_VERSION_MAJOR,
+            FW_VERSION_MINOR,
+            FW_VERSION_PATCH,
             // Byte 4: WebUSB landing-page enabled (1) / disabled (0). Older web
             // apps simply ignore the extra byte.
             static_cast<uint8_t>(landingPageEnabled() ? 1 : 0)

@@ -1,0 +1,4143 @@
+
+---
+events:
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:28 (find_package)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    name: "ZephyrBuildConfiguration"
+    configs:
+      -
+        filename: "ZephyrBuild.cps"
+        kind: "cps"
+      -
+        filename: "zephyrbuild.cps"
+        kind: "cps"
+      -
+        filename: "ZephyrBuildConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "zephyrbuild-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "optional"
+      quiet: true
+      global: false
+      policy_scope: false
+      bypass_provider: false
+      names:
+        - "ZephyrBuild"
+      search_paths:
+        - "/home/starlark/github/zephyr/../*"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: false
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: false
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: false
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: false
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-server/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/PokemonGB_Online_Trades/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.claude/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-tetris-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-pokemon-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-link-firmware-reconfigurable/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-multiboot-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Server/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/backup/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/cmake/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/cmake/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/visualboyadvance-m/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/RetroArch/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-bridge-core/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp_modified/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/.west/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/cmake/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/cmake/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/modules/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-dump-gb/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/aw2bhr/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/advancewars/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/logcaptures/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/game-boy-zero-link-case-main/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-yoshi-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-drmario/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-homepage/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/picoflash/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pidcodes.github.com/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gamebub-gblink/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-cart-doctor-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/CrowdSupply/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gb-printer-web/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-launcher/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gpsp/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokefirered/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gblink-distributor/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Client/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/emulators/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-Wireless/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/gba-link-connection/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware-wireless2/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/Celio-Firmware/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/ZephyrBuildConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/zephyrbuild-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/lib/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/lib/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/share/cps/ZephyrBuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/pokeemerald/share/cps/zephyrbuild.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:41 (find_package)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    name: "ZephyrAppConfiguration"
+    configs:
+      -
+        filename: "ZephyrApp.cps"
+        kind: "cps"
+      -
+        filename: "zephyrapp.cps"
+        kind: "cps"
+      -
+        filename: "ZephyrAppConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "zephyrapp-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "optional"
+      quiet: true
+      global: false
+      policy_scope: false
+      bypass_provider: false
+      names:
+        - "ZephyrApp"
+      search_paths:
+        - "/home/starlark/github/GBLink-Firmware"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: false
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: false
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: false
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: false
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/ZephyrAppConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/zephyrapp-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/ZephyrApp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/zephyrapp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/ZephyrApp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/zephyrapp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/ZephyrAppConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/zephyrapp-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/lib/cps/ZephyrApp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/lib/cps/zephyrapp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/share/cps/ZephyrApp.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/share/cps/zephyrapp.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/ccache.cmake:10 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CCACHE_FOUND"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ccache"
+    candidate_directories:
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/opt/devkitpro/tools/bin/ccache"
+      - "/home/starlark/.cargo/bin/ccache"
+      - "/home/starlark/.local/bin/ccache"
+      - "/home/starlark/bin/ccache"
+      - "/usr/lib64/ccache/ccache"
+      - "/usr/local/sbin/ccache"
+      - "/usr/local/bin/ccache"
+      - "/usr/sbin/ccache"
+    found: "/usr/bin/ccache"
+    search_context:
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindZephyr-sdk.cmake:77 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:53 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    name: "Zephyr-sdk"
+    configs:
+      -
+        filename: "Zephyr-sdk.cps"
+        kind: "cps"
+      -
+        filename: "zephyr-sdk.cps"
+        kind: "cps"
+      -
+        filename: "Zephyr-sdkConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "zephyr-sdk-config.cmake"
+        kind: "cmake"
+    version_request:
+      version: "0.0.0"
+      version_complete: "0.0.0"
+      exact: true
+    settings:
+      required: "optional"
+      quiet: true
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "Zephyr-sdk"
+      search_paths:
+        - "/usr"
+        - "/usr/local"
+        - "/opt"
+        - "/home/starlark"
+        - "/home/starlark/.local"
+        - "/home/starlark/.local/opt"
+        - "/home/starlark/bin"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/devkitpro/tools/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.cargo/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/.local/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib64/ccache/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/local/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/usr/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/var/lib/snapd/snap/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "insufficient_version"
+        message: "The version found is not compatible with the version requested."
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/zephyr-sdk-0.16.8/cmake/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/Zephyr-sdkConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/zephyr-sdk-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/lib/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/lib/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/share/cps/Zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/opt/share/cps/zephyr-sdk.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found: null
+    search_context:
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:56 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "GPERF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gperf"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/gperf"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/gperf"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/gperf"
+      - "/opt/devkitpro/tools/bin/gperf"
+      - "/home/starlark/.cargo/bin/gperf"
+      - "/home/starlark/.local/bin/gperf"
+      - "/home/starlark/bin/gperf"
+      - "/usr/lib64/ccache/gperf"
+      - "/usr/local/sbin/gperf"
+      - "/usr/local/bin/gperf"
+      - "/usr/sbin/gperf"
+    found: "/usr/bin/gperf"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:59 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "OPENOCD"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "openocd"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/openocd"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/openocd"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/openocd"
+      - "/opt/devkitpro/tools/bin/openocd"
+      - "/home/starlark/.cargo/bin/openocd"
+      - "/home/starlark/.local/bin/openocd"
+      - "/home/starlark/bin/openocd"
+      - "/usr/lib64/ccache/openocd"
+      - "/usr/local/sbin/openocd"
+      - "/usr/local/bin/openocd"
+      - "/usr/sbin/openocd"
+      - "/usr/bin/openocd"
+      - "/var/lib/snapd/snap/bin/openocd"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:62 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "BOSSAC"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "bossac"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/bossac"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/bossac"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bossac"
+      - "/opt/devkitpro/tools/bin/bossac"
+      - "/home/starlark/.cargo/bin/bossac"
+      - "/home/starlark/.local/bin/bossac"
+      - "/home/starlark/bin/bossac"
+      - "/usr/lib64/ccache/bossac"
+      - "/usr/local/sbin/bossac"
+      - "/usr/local/bin/bossac"
+      - "/usr/sbin/bossac"
+      - "/usr/bin/bossac"
+      - "/var/lib/snapd/snap/bin/bossac"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:66 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "IMGTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "imgtool"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/imgtool"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/imgtool"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/imgtool"
+      - "/opt/devkitpro/tools/bin/imgtool"
+      - "/home/starlark/.cargo/bin/imgtool"
+    found: "/home/starlark/.local/bin/imgtool"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/compiler/gcc/generic.cmake:5 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:108 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/compiler/gcc/generic.cmake:6 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindHostTools.cmake:108 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:9 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_GCOV"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcov"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcov"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcov"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/modules/FindDtc.cmake:19 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/dts.cmake:10 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:132 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "DTC"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "dtc"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    found: "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/dtc"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/compiler/gcc/target.cmake:9 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:103 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/compiler/gcc/target.cmake:27 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:103 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-g++"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-g++"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:5 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_OBJCOPY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-objcopy"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-objcopy"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:6 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_OBJDUMP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:7 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_AS"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-as"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-as"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:12 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-ar"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-ar"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:13 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_RANLIB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-ranlib"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-ranlib"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:15 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_READELF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-readelf"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-readelf"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:16 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_NM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-nm"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-nm"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:17 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_STRIP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-strip"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-strip"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:19 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_GDB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb-py"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb-py"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/bintools/gnu/target.cmake:31 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/FindTargetTools.cmake:106 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:25 (find_package)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_GDB_NO_PY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gdb"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+      - "/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/uname"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/uname"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/uname"
+      - "/opt/devkitpro/tools/bin/uname"
+      - "/home/starlark/.cargo/bin/uname"
+      - "/home/starlark/.local/bin/uname"
+      - "/home/starlark/bin/uname"
+      - "/usr/lib64/ccache/uname"
+      - "/usr/local/sbin/uname"
+      - "/usr/local/bin/uname"
+      - "/usr/sbin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:207 (message)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      The target system is: Generic - 3.7.2 - arm
+      The host system is: Linux - 7.0.10-201.fc44.x86_64 - x86_64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeNinjaFindMake.cmake:5 (find_program)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_MAKE_PROGRAM"
+    description: "Program used to build from build.ninja files."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ninja-build"
+      - "ninja"
+      - "samu"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/ninja-build"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/ninja"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/samu"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/ninja-build"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/ninja"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/samu"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/ninja-build"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/ninja"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/samu"
+      - "/opt/devkitpro/tools/bin/ninja-build"
+      - "/opt/devkitpro/tools/bin/ninja"
+      - "/opt/devkitpro/tools/bin/samu"
+      - "/home/starlark/.cargo/bin/ninja-build"
+      - "/home/starlark/.cargo/bin/ninja"
+      - "/home/starlark/.cargo/bin/samu"
+      - "/home/starlark/.local/bin/ninja-build"
+    found: "/home/starlark/.local/bin/ninja"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/usr/share/cmake/Modules/"
+      - "/home/starlark/github/zephyr/cmake/modules/"
+    found: "/usr/share/cmake/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+      Compiler: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/bin/ld: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/lib/libc.a(lib_a-exit.o): in function `exit':
+      exit.c:(.text.exit+0x34): undefined reference to `_exit'
+      collect2: error: ld returned 1 exit status
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/usr/share/cmake/Modules/"
+      - "/home/starlark/github/zephyr/cmake/modules/"
+    found: "/usr/share/cmake/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc 
+      Build flags: 
+      Id flags: -c 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is GNU, found in:
+        /home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/4.3.0/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_DLLTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-dlltool"
+      - "dlltool"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-dlltool"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-dlltool"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-dlltool"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-dlltool"
+      - "/home/starlark/bin/arm-zephyr-eabi-dlltool"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-dlltool"
+      - "/usr/local/sbin/arm-zephyr-eabi-dlltool"
+      - "/usr/local/bin/arm-zephyr-eabi-dlltool"
+      - "/usr/sbin/arm-zephyr-eabi-dlltool"
+      - "/usr/bin/arm-zephyr-eabi-dlltool"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-dlltool"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/dlltool"
+      - "/opt/devkitpro/tools/bin/dlltool"
+      - "/home/starlark/.cargo/bin/dlltool"
+      - "/home/starlark/.local/bin/dlltool"
+      - "/home/starlark/bin/dlltool"
+      - "/usr/lib64/ccache/dlltool"
+      - "/usr/local/sbin/dlltool"
+      - "/usr/local/bin/dlltool"
+      - "/usr/sbin/dlltool"
+      - "/usr/bin/dlltool"
+      - "/var/lib/snapd/snap/bin/dlltool"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_ADDR2LINE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-addr2line"
+      - "addr2line"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-addr2line"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-addr2line"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-addr2line"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-addr2line"
+      - "/home/starlark/bin/arm-zephyr-eabi-addr2line"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-addr2line"
+      - "/usr/local/sbin/arm-zephyr-eabi-addr2line"
+      - "/usr/local/bin/arm-zephyr-eabi-addr2line"
+      - "/usr/sbin/arm-zephyr-eabi-addr2line"
+      - "/usr/bin/arm-zephyr-eabi-addr2line"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-addr2line"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/addr2line"
+      - "/opt/devkitpro/tools/bin/addr2line"
+      - "/home/starlark/.cargo/bin/addr2line"
+      - "/home/starlark/.local/bin/addr2line"
+      - "/home/starlark/bin/addr2line"
+      - "/usr/lib64/ccache/addr2line"
+      - "/usr/local/sbin/addr2line"
+      - "/usr/local/bin/addr2line"
+      - "/usr/sbin/addr2line"
+    found: "/usr/bin/addr2line"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_TAPI"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-tapi"
+      - "tapi"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-tapi"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-tapi"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-tapi"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-tapi"
+      - "/home/starlark/bin/arm-zephyr-eabi-tapi"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-tapi"
+      - "/usr/local/sbin/arm-zephyr-eabi-tapi"
+      - "/usr/local/bin/arm-zephyr-eabi-tapi"
+      - "/usr/sbin/arm-zephyr-eabi-tapi"
+      - "/usr/bin/arm-zephyr-eabi-tapi"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-tapi"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/tapi"
+      - "/opt/devkitpro/tools/bin/tapi"
+      - "/home/starlark/.cargo/bin/tapi"
+      - "/home/starlark/.local/bin/tapi"
+      - "/home/starlark/bin/tapi"
+      - "/usr/lib64/ccache/tapi"
+      - "/usr/local/sbin/tapi"
+      - "/usr/local/bin/tapi"
+      - "/usr/sbin/tapi"
+      - "/usr/bin/tapi"
+      - "/var/lib/snapd/snap/bin/tapi"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ar-12.2"
+      - "arm-zephyr-eabi-gcc-ar-12"
+      - "arm-zephyr-eabi-gcc-ar12"
+      - "arm-zephyr-eabi-gcc-ar"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "arm-zephyr-eabi-gcc-ranlib-12"
+      - "arm-zephyr-eabi-gcc-ranlib12"
+      - "arm-zephyr-eabi-gcc-ranlib"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "/usr/share/cmake/Modules/"
+      - "/home/starlark/github/zephyr/cmake/modules/"
+    found: "/usr/share/cmake/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+      Compiler: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-g++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      1
+      /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/bin/ld: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/../lib/gcc/arm-zephyr-eabi/12.2.0/../../../../arm-zephyr-eabi/lib/libc.a(lib_a-exit.o): in function `exit':
+      exit.c:(.text.exit+0x34): undefined reference to `_exit'
+      collect2: error: ld returned 1 exit status
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "/usr/share/cmake/Modules/"
+      - "/home/starlark/github/zephyr/cmake/modules/"
+    found: "/usr/share/cmake/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-g++ 
+      Build flags: 
+      Id flags: -c 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is GNU, found in:
+        /home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/4.3.0/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ar-12.2"
+      - "arm-zephyr-eabi-gcc-ar-12"
+      - "arm-zephyr-eabi-gcc-ar12"
+      - "arm-zephyr-eabi-gcc-ar"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-12.2"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:128 (project)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "arm-zephyr-eabi-gcc-ranlib-12"
+      - "arm-zephyr-eabi-gcc-ranlib12"
+      - "arm-zephyr-eabi-gcc-ranlib"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-12.2"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib12"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompiler.cmake:54 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineASMCompiler.cmake:61 (_cmake_find_compiler)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:134 (enable_language)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_ASM_COMPILER"
+    description: "ASM compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+    found: "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PROGRAM_PATH:
+        - "/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:1296 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineASMCompiler.cmake:170 (CMAKE_DETERMINE_COMPILER_ID_VENDOR)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:134 (enable_language)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    message: |
+      Checking whether the ASM compiler is GNU using "--version" matched "(GNU assembler)|(GCC)|(Free Software Foundation)":
+      arm-zephyr-eabi-gcc (Zephyr SDK 0.16.8) 12.2.0
+      Copyright (C) 2022 Free Software Foundation, Inc.
+      This is free software; see the source for copying conditions.  There is NO
+      warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineASMCompiler.cmake:268 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:134 (enable_language)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_ASM_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ar-"
+      - "arm-zephyr-eabi-gcc-ar-"
+      - "arm-zephyr-eabi-gcc-ar"
+      - "arm-zephyr-eabi-gcc-ar"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+      - "/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar-"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/bin/arm-zephyr-eabi-gcc-ar-"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar"
+      - "/bin/arm-zephyr-eabi-gcc-ar"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ar"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ar"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ar"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ar"
+      - "/bin/arm-zephyr-eabi-gcc-ar"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PROGRAM_PATH:
+        - "/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineASMCompiler.cmake:268 (include)"
+      - "/home/starlark/github/zephyr/cmake/modules/kernel.cmake:134 (enable_language)"
+      - "/home/starlark/github/zephyr/cmake/modules/zephyr_default.cmake:141 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:66 (include)"
+      - "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake:92 (include_boilerplate)"
+      - "CMakeLists.txt:16 (find_package)"
+    mode: "program"
+    variable: "CMAKE_ASM_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "arm-zephyr-eabi-gcc-ranlib-"
+      - "arm-zephyr-eabi-gcc-ranlib-"
+      - "arm-zephyr-eabi-gcc-ranlib"
+      - "arm-zephyr-eabi-gcc-ranlib"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+      - "/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/bin/arm-zephyr-eabi-gcc-ranlib-"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/tmp/zephyr-sdk-0.16.8/arm-zephyr-eabi/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/opt/devkitpro/tools/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.cargo/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/.local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/home/starlark/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/lib64/ccache/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/local/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/sbin/arm-zephyr-eabi-gcc-ranlib"
+      - "/usr/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/var/lib/snapd/snap/bin/arm-zephyr-eabi-gcc-ranlib"
+      - "/bin/arm-zephyr-eabi-gcc-ranlib"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PROGRAM_PATH:
+        - "/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/reports/CMakeLists.txt:70 (find_program)"
+    mode: "program"
+    variable: "PUNCOVER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "puncover"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+      - "/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/puncover"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/puncover"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/puncover"
+      - "/opt/devkitpro/tools/bin/puncover"
+      - "/home/starlark/.cargo/bin/puncover"
+      - "/home/starlark/.local/bin/puncover"
+      - "/home/starlark/bin/puncover"
+      - "/usr/lib64/ccache/puncover"
+      - "/usr/local/sbin/puncover"
+      - "/usr/local/bin/puncover"
+      - "/usr/sbin/puncover"
+      - "/usr/bin/puncover"
+      - "/var/lib/snapd/snap/bin/puncover"
+      - "/bin/puncover"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PROGRAM_PATH:
+        - "/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/home/starlark/github/zephyr/cmake/reports/CMakeLists.txt:87 (find_program)"
+    mode: "program"
+    variable: "PAHOLE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "pahole"
+    candidate_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/"
+      - "/opt/devkitpro/tools/bin/"
+      - "/home/starlark/.cargo/bin/"
+      - "/home/starlark/.local/bin/"
+      - "/home/starlark/bin/"
+      - "/usr/lib64/ccache/"
+      - "/usr/local/sbin/"
+      - "/usr/local/bin/"
+      - "/usr/sbin/"
+      - "/usr/bin/"
+      - "/var/lib/snapd/snap/bin/"
+      - "/bin/"
+    searched_directories:
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/bin/pahole"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/sbin/pahole"
+      - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr/pahole"
+      - "/opt/devkitpro/tools/bin/pahole"
+      - "/home/starlark/.cargo/bin/pahole"
+      - "/home/starlark/.local/bin/pahole"
+      - "/home/starlark/bin/pahole"
+      - "/usr/lib64/ccache/pahole"
+      - "/usr/local/sbin/pahole"
+      - "/usr/local/bin/pahole"
+      - "/usr/sbin/pahole"
+      - "/usr/bin/pahole"
+      - "/var/lib/snapd/snap/bin/pahole"
+      - "/bin/pahole"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PROGRAM_PATH:
+        - "/bin"
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:16 (find_package)"
+    name: "Zephyr"
+    configs:
+      -
+        filename: "Zephyr.cps"
+        kind: "cps"
+      -
+        filename: "zephyr.cps"
+        kind: "cps"
+      -
+        filename: "ZephyrConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "zephyr-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "required_explicit"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      hints:
+        - "/home/starlark/github/GBLink-Firmware/zephyr"
+        - "/home/starlark/github/zephyr"
+      names:
+        - "Zephyr"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/Zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/lib/cps/zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/Zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/GBLink-Firmware/build-wl/CMakeFiles/pkgRedirects/share/cps/zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/cmake/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/cmake/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/lib/cps/Zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/lib/cps/zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/cps/Zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/cps/zephyr.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyrunittest-package/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyrunittest-package/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyr-package/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyr-package/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyrunittest-package/cmake/ZephyrConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/home/starlark/github/zephyr/share/zephyrunittest-package/cmake/zephyr-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+    found:
+      path: "/home/starlark/github/zephyr/share/zephyr-package/cmake/ZephyrConfig.cmake"
+      mode: "config"
+      version: "3.7.2"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/zephyr-sdk-0.16.8/sysroots/x86_64-pokysdk-linux/usr"
+      ENV{PATH}:
+        - "/opt/devkitpro/tools/bin"
+        - "/home/starlark/.cargo/bin"
+        - "/home/starlark/.local/bin"
+        - "/home/starlark/bin"
+        - "/opt/devkitpro/tools/bin"
+        - "/usr/lib64/ccache"
+        - "/usr/local/sbin"
+        - "/usr/local/bin"
+        - "/usr/sbin"
+        - "/usr/bin"
+        - "/var/lib/snapd/snap/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+...

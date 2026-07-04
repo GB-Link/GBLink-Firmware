@@ -9,7 +9,7 @@ namespace
     #define STORAGE_PARTITION_ID FIXED_PARTITION_ID(storage_partition)
 
     constexpr uint8_t SETTINGS_MAGIC = 0x5A;
-    constexpr uint8_t SETTINGS_VERSION = 5; // bumped to re-default the LED colours (25% brightness, AW white)
+    constexpr uint8_t SETTINGS_VERSION = 6; // bumped for the new RFU LED slot
 
     struct PersistSettings
     {
@@ -27,6 +27,7 @@ namespace
         { 0,   0,   64  }, // GB/GBC — blue
         { 64,  0,   64  }, // printer — purple
         { 64,  64,  64  }, // Advance Wars — white
+        { 0,   64,  64  }, // RFU wireless — cyan
     };
 
     void fillDefaults(PersistSettings& s)

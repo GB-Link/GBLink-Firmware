@@ -32,3 +32,8 @@ enum LinkMode link_getMode();
 void link_changeMode(enum LinkMode mode);
 
 void link_detectCableType(void);
+
+// True when the last detection saw a GBA cable (GP1 grounded). The GBC cable
+// is the one whose GP1 carries the GBA's SO — required by full-duplex modes
+// (RFU wireless adapter emulation).
+bool link_isGbaCable(void);

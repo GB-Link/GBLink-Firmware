@@ -7,10 +7,20 @@ all: run
 awProtocolTest: awProtocolTest.cpp ../../src/sections/awProtocol.hpp
 	$(CXX) $(CXXFLAGS) -o $@ awProtocolTest.cpp
 
-run: awProtocolTest
+rfuProtocolTest: rfuProtocolTest.cpp ../../src/sections/rfuProtocol.hpp
+	$(CXX) $(CXXFLAGS) -o $@ rfuProtocolTest.cpp
+
+# Independent derivation of the SIO32 ID-exchange sequence (no firmware deps);
+# proves the canned table converges FRLG's checkID to RFU_ID.
+rfuIdDerive: rfuIdDerive.cpp
+	$(CXX) $(CXXFLAGS) -o $@ rfuIdDerive.cpp
+
+run: awProtocolTest rfuProtocolTest rfuIdDerive
 	./awProtocolTest
+	./rfuProtocolTest
+	./rfuIdDerive
 
 clean:
-	rm -f awProtocolTest
+	rm -f awProtocolTest rfuProtocolTest rfuIdDerive
 
 .PHONY: all run clean

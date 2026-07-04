@@ -1,14 +1,5 @@
-// usb_descriptor.h is an internal Zephyr C header without extern "C" guards;
-// include it first with C linkage so usb_get_device_descriptor() (used below to
-// stamp bcdDevice) resolves to the C symbol instead of a mangled C++ name. Its
-// include guard makes usbLayer.hpp's own include of it a no-op.
-extern "C" {
-#include <usb_descriptor.h>
-}
-
 #include "usbLayer.hpp"
 #include "../persist.hpp"
-#include "../firmware_version.hpp"
 
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/usb/usb_device.h>
@@ -36,13 +27,6 @@ namespace
 
     static struct msosv2_descriptor_t {
         struct msosv2_descriptor_set_header header;
-        // This device is composite (vendor/WebUSB interface + CDC-ACM for
-        // WebSerial), so Windows loads usbccgp and splits it into per-function
-        // child PDOs. The WINUSB compatible ID and DeviceInterfaceGUIDs must be
-        // scoped to the vendor function via a Function Subset Header; without it
-        // usbccgp never binds WinUSB to the vendor interface and WebUSB cannot
-        // open the device (works on macOS/Linux, which ignore MS OS descriptors).
-        struct msosv2_function_subset_header function_subset;
         struct msosv2_compatible_id webusb_compatible_id;
         struct msosv2_guids_property webusb_guids_property;
     } __packed msosv2_descriptor = {
@@ -51,16 +35,6 @@ namespace
             .wDescriptorType = MS_OS_20_SET_HEADER_DESCRIPTOR,
             .dwWindowsVersion = 0x06030000,
             .wTotalLength = sizeof(struct msosv2_descriptor_t),
-        },
-        .function_subset = {
-            .wLength = sizeof(struct msosv2_function_subset_header),
-            .wDescriptorType = MS_OS_20_SUBSET_HEADER_FUNCTION,
-            // Vendor interface is interface 0 (it has no interface_config
-            // callback, so the stack never renumbers it; CDC-ACM takes 1 and 2).
-            .bFirstInterface = 0,
-            .wSubsetLength = sizeof(struct msosv2_function_subset_header)
-                + sizeof(struct msosv2_compatible_id)
-                + sizeof(struct msosv2_guids_property),
         },
         .webusb_compatible_id = {
             .wLength = sizeof(struct msosv2_compatible_id),
@@ -231,7 +205,7 @@ namespace
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       /* reserved    */
 
         /* MS OS 1.0 function section */
-        0x00,     /* Interface this section applies to (vendor/WebUSB = IF0). */
+        0x02,     /* Index of interface this section applies to. */
         0x01,     /* reserved */
         /* 8-byte compatible ID string, then 8-byte sub-compatible ID string */
         'W',  'I',  'N',  'U',  'S',  'B',  0x00, 0x00,
@@ -428,17 +402,6 @@ namespace
         usb_bos_register_cap((void *)&bos_cap_webusb);
 	    usb_bos_register_cap((void *)&bos_cap_msosv2);
 	    usb_bos_register_cap((void *)&bos_cap_lpm);
-
-        // Stamp bcdDevice with the firmware version. Zephyr otherwise derives it
-        // from the kernel version (constant across our releases), which leaves
-        // Windows serving a stale cached MS OS / WinUSB binding after a firmware
-        // update. Advancing it makes Windows re-read the descriptors. The fixup
-        // pass runs on first call; it never touches bcdDevice, so this sticks.
-        auto *deviceDescriptor =
-            reinterpret_cast<struct usb_device_descriptor *>(usb_get_device_descriptor());
-        if (deviceDescriptor != nullptr) {
-            deviceDescriptor->bcdDevice = sys_cpu_to_le16(fw::bcdDevice);
-        }
 
         int ret = usb_enable(NULL);
         if (ret == 0) g_enabled = true;

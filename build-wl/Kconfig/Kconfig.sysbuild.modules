@@ -1,0 +1,6 @@
+config ZEPHYR_CMSIS_MODULE
+   bool
+   default y
+config ZEPHYR_HAL_RPI_PICO_MODULE
+   bool
+   default y

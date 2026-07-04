@@ -1,15 +1,8 @@
-# GB-Link/Celio-Link firmware
+# GBLink Firmware — RP2040 Game Boy Link Adapter
 
-This firmware turns an RP2040 into a USB-to-Game Boy Link Cable adapter, bringing various Game Boy and Game Boy Advance games into the Internet age.
+This firmware turns an RP2040 into a USB-to-Game Boy Link Cable adapter supporting both **Game Boy (Gen 1/2)** and **Game Boy Advance** communication over WebUSB.
 
-The firmware originally stems from the Celio Firmware of the CelioLink project, whose goal is to bring online functionality to the Pokémon Generation III games. It was initially developed independently, but over time it merged with the GBLink project, which added support for playing Tetris online, sending multiboot files, emulating the Game Boy Printer, and playing Advance Wars 1 and 2 online.
-
-The GBLink fork and this repository share the same core codebase and releases, but they are maintained separately to honor the projects from which they originated.
-
-You are free to choose whichever web frontend you prefer to use:
-
-* https://launcher.gblink.io Launcher to all subprojects
-* https://celi0.link The GBA part of the project
+This is originally forked from Celio Firmware from the CelioLink project and adds the functionality from GBLink Reconfigurable to allow for Tetris, Pokemon gen1-3 trading. Sending multiboot files to GBA, GB Printer emulator, as well as the Celio Gen3 modes for direct gen3 GBA link.
 
 ## Quick Start
 
@@ -32,16 +25,13 @@ Manual update
 | **GBA Link** | `0x01` | Bridge two GBA systems over the internet |
 | **GB Link** | `0x02` | SPI passthrough for Game Boy |
 | **GB Printer** | `0x03` | Game Boy Printer emulation (bit-bang SPI slave) |
-| **GBA Advance Wars** | `0x04` | Advance Wars 1 + 2 |
+| **GBA Advance Wars** | `0x04` | Advance Wars, Sill WIP |
 
 ---
 
 ## Hardware Required
 
-* **USB Adapter:** Assembled v2 hardware from Crowd Supply or DIY PCBs.
-
-Crowd Supply: https://www.crowdsupply.com/gblink/gblink-usb-v2
-
+* **USB Adapter Board:** Raspberry Pi Pico or Waveshare RP2040-Zero, Solderless board in development. Pre built DIY adapter or kits are avalible on Etsy. https://www.etsy.com/listing/1517956485/gb-link-usb-to-gameboy-link-adapter-for 
 
 Existing open source PCB designs
 
@@ -62,11 +52,10 @@ The firmware uses the RP2040 PIO to communicate with the Game Boy. Connect the L
 | **GND** | **Ground** |
 
 Additional hardware pins:
-|Voltage | Pin | Usage|
-|:---|:---|:---|
-| **Voltage 3.3V** | **GP11** | Pull low for 3.3V |
-| **Voltage 5V** | **GP12** | Pull low for 5V |
-| **WS2812 LED** | **GP16** | NeoPixel status indicator |
+
+| **Voltage 3.3V** | **GP11** | Pull low for 3.3V 
+| **Voltage 5V** | **GP12** | Pull low for 5V
+| **WS2812 LED** | **GP16** | NeoPixel status indicator
 
 ---
 
@@ -118,65 +107,11 @@ Commands are sent over the WebUSB command endpoint:
 | `0x30–0x3F` | GB Link | `0x30` SetTimingConfig, `0x31` EnterPrinter, `0x32` ExitPrinter |
 | `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors |
 | `0x44` | SetWebUsbLanding | (`data[1]`: 1 = on, 0 = off) persists whether the adapter advertises the **launcher.gblink.io** WebUSB landing page (the browser "open site" prompt on connect). It's stored in flash and applies on the next reconnect. The current state is reported as a 5th byte in the `0x0F` GetFirmwareInfo response. |
+
 | `0x45` | GetLedConfig | returns the persisted per-mode LED colours: `[0x45, count, r,g,b …]` (slots: 0 idle, 1 GBA/Celio, 2 GB/GBC, 3 printer, 4 Advance Wars). |
 | `0x46` | SetModeLedColor | (`[0x46, slot, r, g, b]`) persists a mode's colour (applied on next entry to that mode |
 |`0x42` | SetLEDColor | sets the LED live for previewing). |
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |
-
----
-
-# How to bring GBAs online 
-
-The serial interface of the Game Boy Advance supports several modes for transmitting data to other Game Boy systems. This firmware has been designed to emulate **SIO Multi-Player Mode**.
-
-In this mode, there is one **Leader** and up to three **Followers**. Under normal circumstances, the Leader is determined by the plug used on a Game Boy Advance Link Cable. One of the plugs pulls a specific pin to ground, signaling to the Game Boy Advance that it should act as the Leader.
-
-The firmware allows the connected Game Boy Advance to be configured dynamically as either a Leader or a Follower. This means that a third party—in this case, the server—can switch the connected Game Boy Advance into whichever role is currently required.
-
-When it comes to transmitting actual game data, the Game Boy systems must adhere to very precise timing requirements. As a result, connecting two Game Boy Advances directly over the Internet is impossible. However, the firmware keeps the Game Boys in an idle communication loop, making each device appear to be connected to its communication partners. This approach decouples the game data from the strict timing requirements.
-
-The firmware can then relay data received from the Game Boy Advance to the server and forward data received from the server back to the Game Boy Advance.
-
-While this technique is not a game-agnostic solution and will not work for all game genres, it is particularly well suited for turn-based strategy games. Although the game protocols still require a significant amount of reverse engineering, they can operate quite reliably once this process has been completed.
-
-**Currently Supported Games**:
-
-- Pokémon Ruby  
-- Pokémon Sapphire  
-- Pokémon FireRed  
-- Pokémon LeafGreen  
-- Pokémon Emerald
-- Advance Wars 1
-- Advance Wars 2
-
----
-
-## Zephyr RTOS
-
-This project uses **Zephyr RTOS**:
-
-https://www.zephyrproject.org/
-
-Originally, the target MCU of the Celio project was a STM32F07.
-Thanks to Zephyr, migrating to the RP2040 required only minimal to moderate effort.
-
-Zephyr provides most low-level abstractions.  
-The only MCU-specific implementation resides in: ```/src/layers/linkLayer_.c```   
-This file implements the low-level bit-layer handling of the link protocol.
-
-To port this project to another MCU:
-
-1. Ensure the MCU is supported by Zephyr.
-2. Implement a new `linkLayer`.
-3. Provide a master clock implementation.
-
-The remaining firmware is largely MCU-agnostic.
-
-Currently built against:
-
-- **Zephyr 3.7.99**
-
-Newer versions should also be compatible.
 
 ---
 

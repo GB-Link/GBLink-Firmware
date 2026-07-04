@@ -23,6 +23,10 @@ enum class LinkStatus : uint16_t
     GBPrinterModeActive = 0xFF0B,
     GBSessionFinished = 0xFF0C,
 
+    // The connected cable cannot carry the mode's signals (RFU needs the
+    // GBC cable for the full-duplex SO/SI pair).
+    WrongCable = 0xFF0D,
+
     StatusDebug = 0xFFFF
 };
 

@@ -108,6 +108,11 @@ void link_detectCableType(void)
     g_gbc_cable = detect_gbc_cable();
 }
 
+bool link_isGbaCable(void)
+{
+    return !g_gbc_cable;
+}
+
 static PIO g_pio = NULL;
 static size_t g_sm = 0;
 
