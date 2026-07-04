@@ -440,7 +440,6 @@ public:
         {
             m_waitDeadlineMs = nowMs + m_timeoutFrames * 1000u / 60u;
             m_rtxDeadlineMs = nowMs + m_rtxMax * 1000u / 360u;
-            m_keepaliveMs = nowMs + clientKeepaliveMs;
             m_waitArmed = true;
         }
 
@@ -467,21 +466,13 @@ public:
             m_buf[2] = BUSY_WORD;
             m_plen = 3;
         }
-        else if (state == stClient && timeReached(nowMs, m_keepaliveMs))
-        {
-            // No host payload crossed the relay yet: deliver an EMPTY data
-            // event, like the real adapter's per-RF-frame cadence (a child
-            // gets an event every ~17ms while connected — the parent's radio
-            // retransmits continuously even when the game sends nothing).
-            // Without this the child's whole pump — including its NI
-            // fragment retries — runs at the 533ms TIMEO cadence, ~30x
-            // slower than hardware, and any sub-second window on the parent
-            // side (name acceptance) expires before one retry. The short
-            // grace lets a genuinely in-flight host frame win the poll.
-            m_buf[0] = 0x99660000 | CMD_RESP_DATA;
-            m_buf[1] = BUSY_WORD;
-            m_plen = 2;
-        }
+        // No empty-data keepalive here, deliberately (it existed once): a
+        // fake per-17ms RESP_DATA unblocks the child's wait WITHOUT peer
+        // data, so its pump free-runs on its own clock instead of being
+        // paced by the parent's real frames. gpsp's WAIT rendezvous — data
+        // event only on actual arrivals — is what keeps the two pumps in
+        // lockstep and the FIFOs shallow; a pumping parent sends ~60Hz, so
+        // the child's events still come every ~17ms, carrying real frames.
         else if (timeReached(nowMs, m_waitDeadlineMs))
         {
             m_buf[0] = 0x99660000 | CMD_RESP_TIMEO;
@@ -702,14 +693,8 @@ public:
                     {
                         // ACK so the host knows we are alive
                         emitCmd(NET_CLIENT_ACK, m_client.devid | (m_client.clnum << 16));
-                        // Real-adapter semantics: the receive buffer is ONE
-                        // packet and the LATEST frame wins (unread data is
-                        // lost — the LL layer retransmits by design). A FIFO
-                        // here jams with stale retransmits under the games'
-                        // per-frame pacing and starves the fresh window.
-                        if (m_client.pkt.hblen) counters.rxDropQueueFull++;
-                        std::memcpy(m_client.pkt.hdata, payload, blen);
-                        m_client.pkt.hblen = blen;
+                        m_client.pkt.push(payload, static_cast<uint8_t>(blen),
+                                          counters.rxDropQueueFull);
                     }
                 }
                 break;
@@ -724,11 +709,9 @@ public:
                     if (m_host.clients[clid].devid == cdevid && blen <= 16 && plen >= blen)
                     {
                         m_host.clients[clid].lastHeardMs = nowMs;
-                        // Keep-latest, single buffer (see NET_HOST_SEND).
-                        auto& p = m_host.clients[clid].pkt;
-                        if (p.datalen) counters.rxDropQueueFull++;
-                        std::memcpy(p.data, payload, blen);
-                        p.datalen = static_cast<uint8_t>(blen);
+                        m_host.clients[clid].pkt.push(payload,
+                                                      static_cast<uint8_t>(blen),
+                                                      counters.rxDropQueueFull);
                     }
                 }
                 break;
@@ -794,14 +777,59 @@ private:
     static constexpr uint32_t clientTimeoutMs = 4000; // 240 frames
     static constexpr uint32_t connectRetryMs = 300;   // RF connect-retry cadence
     static constexpr uint8_t  connectRetryMax = 8;    // ≈ the game's connect window
-    static constexpr uint32_t clientKeepaliveMs = 17; // ≈ one RF frame
+
+    // Inbound packet FIFO (≙ gpsp's pkts[4], rfu.c:138-153). The games' UNI
+    // command/block protocols (chat exit, trade data) assume the lossless
+    // shared RF frame clock: every distinct frame must reach the reader
+    // exactly once, in order. A latest-wins buffer silently skips a frame
+    // whenever two arrive between the reader's polls — fatal for one-shot
+    // commands. gpsp: front-pop on RECV, tail-drop on overflow (rfu.c:827,
+    // 851), zero-length return when starved, no dedup/no coalescing — the
+    // WAIT rendezvous paces the two pumps so the queue stays shallow. Depth
+    // 8 (vs gpsp's 4) buys headroom for relay jitter bursts.
+    template <uint8_t MAXLEN, uint8_t DEPTH>
+    struct PktQueue
+    {
+        uint8_t q[DEPTH][MAXLEN];
+        uint8_t qlen[DEPTH];
+        uint8_t head = 0, count = 0;
+
+        void push(const uint8_t* p, uint8_t len, volatile uint32_t& dropCounter)
+        {
+            if (!len) return;  // len 0 marks an empty slot, as in gpsp
+            if (count == DEPTH)
+            {
+                dropCounter = dropCounter + 1;  // tail-drop, like gpsp
+                return;
+            }
+            const uint8_t slot = (head + count) % DEPTH;
+            std::memcpy(q[slot], p, len);
+            qlen[slot] = len;
+            count++;
+        }
+
+        bool pending() const { return count != 0; }
+
+        // Pop the front frame; 0 = queue empty (gpsp returns a zero
+        // byte-count header then, never a stale copy). The returned pointer
+        // stays valid until the next push — callers copy it out within the
+        // same irq_lock/ISR section.
+        uint8_t read(const uint8_t** out)
+        {
+            if (!count) return 0;
+            *out = q[head];
+            const uint8_t len = qlen[head];
+            head = (head + 1) % DEPTH;
+            count--;
+            return len;
+        }
+    };
 
     struct HostClient
     {
         uint16_t devid = 0;          // 0 = empty slot
         uint32_t lastHeardMs = 0;
-        // One packet, latest wins — the real adapter's buffer depth.
-        struct { uint8_t datalen; uint8_t data[16]; } pkt = {};
+        PktQueue<16, 8> pkt = {};
     };
     struct HostState
     {
@@ -819,8 +847,7 @@ private:
     {
         uint16_t devid = 0;
         uint8_t clnum = 0;
-        // One packet, latest wins — the real adapter's buffer depth.
-        struct { uint8_t hblen; uint8_t hdata[128]; } pkt = {};
+        PktQueue<128, 8> pkt = {};
     };
     struct PeerBcast
     {
@@ -850,7 +877,6 @@ private:
     uint32_t m_syscfg = (defRtxMax << 8) | defTimeoutFrames;  // raw 0x17 payload (CFGSTAT echoes it)
     uint32_t m_waitDeadlineMs = 0;
     uint32_t m_rtxDeadlineMs = 0;
-    uint32_t m_keepaliveMs = 0;
     // Latches once the wait deadlines have been armed for the current
     // comWaitEvent (armed lazily on the first pollWaitEvent, which has nowMs).
     bool m_waitArmed = false;
@@ -913,13 +939,13 @@ private:
 
     bool dataAvail() const
     {
-        // ≙ gpsp rfu_data_avail
+        // ≙ gpsp rfu_data_avail — level-triggered on a non-empty front slot
         if (state == stClient)
-            return m_client.pkt.hblen != 0;
+            return m_client.pkt.pending();
         if (state == stHost)
         {
             for (const auto& c : m_host.clients)
-                if (c.devid && c.pkt.datalen)
+                if (c.devid && c.pkt.pending())
                     return true;
         }
         return false;
@@ -1448,13 +1474,15 @@ private:
                     for (unsigned i = 0; i < 4; i++)
                     {
                         auto& c = m_host.clients[i];
-                        const uint32_t dlen = c.pkt.datalen > 16 ? 16 : c.pkt.datalen;
-                        if (c.devid && dlen)
+                        if (!c.devid) continue;
+                        const uint8_t* p;
+                        uint32_t dlen = c.pkt.read(&p);  // one front pop per poll
+                        if (dlen > 16) dlen = 16;        // gpsp truncates (rfu.c:496)
+                        if (dlen)
                         {
-                            std::memcpy(&tmp[bufbytes], c.pkt.data, dlen);
+                            std::memcpy(&tmp[bufbytes], p, dlen);
                             bufbytes += dlen;
                             m_buf[0] |= dlen << (8 + i * 5);
-                            c.pkt.datalen = 0;
                         }
                     }
                     for (uint32_t i = 0; i < (bufbytes + 3) / 4; i++)
@@ -1464,11 +1492,11 @@ private:
                 else if (state == stClient)
                 {
                     uint32_t cnt = 0;
-                    const uint32_t dlen = m_client.pkt.hblen;
+                    const uint8_t* p;
+                    const uint32_t dlen = m_client.pkt.read(&p);
                     m_buf[cnt++] = dlen;
                     for (uint32_t j = 0; j < (dlen + 3) / 4; j++)
-                        m_buf[cnt++] = unpack32le(&m_client.pkt.hdata[j * 4]);
-                    m_client.pkt.hblen = 0;
+                        m_buf[cnt++] = unpack32le(&p[j * 4]);
                     return cnt;
                 }
                 return 0;

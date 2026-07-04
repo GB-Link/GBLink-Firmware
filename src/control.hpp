@@ -24,10 +24,10 @@ class Control
         GetFirmwareInfo = 0x0F
     };
 
-    // Firmware version: 2.4.1 (host-slot eviction clock-skew fix)
+    // Firmware version: 2.4.2 (lossless inbound FIFO + WAIT rendezvous pacing)
     static constexpr uint8_t FW_VERSION_MAJOR = 2;
     static constexpr uint8_t FW_VERSION_MINOR = 4;
-    static constexpr uint8_t FW_VERSION_PATCH = 1;
+    static constexpr uint8_t FW_VERSION_PATCH = 2;
 
     enum class Mode
     {

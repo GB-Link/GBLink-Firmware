@@ -306,14 +306,16 @@ static void testWaitResponses()
         uint32_t t = 1000;
         runCommand(c, CMD_WAIT, {}, t);
         // The first poll arms the deadlines (produce() has no clock); a
-        // connected client with no host payload then gets the per-RF-frame
-        // EMPTY data event (real-adapter cadence), never the 533ms TIMEO.
+        // connected client with no host payload rides the wait to the 533ms
+        // TIMEO exactly like gpsp — data events come from real arrivals
+        // only, no fake empty-data keepalive (it would unblock the pump
+        // off the parent's pace and break the WAIT rendezvous).
         CHECK(!c.pollWaitEvent(t));
-        CHECK(!c.pollWaitEvent(t + 10));        // inside the one-frame grace
-        CHECK(c.pollWaitEvent(t + 20));
+        CHECK(!c.pollWaitEvent(t + 500));
+        CHECK(c.pollWaitEvent(t + 534));
         const auto w = takeDelivery(c);
         CHECK_EQ(w.size(), 2u);
-        CHECK_EQ(w[0], 0x99660000u | CMD_RESP_DATA);
+        CHECK_EQ(w[0], 0x99660000u | CMD_RESP_TIMEO);
         CHECK_EQ(w[1], BUSY_WORD);
         CHECK_EQ(c.comstate, comWaitCmd);
     }
@@ -570,8 +572,9 @@ static void testWaitArming()
     CHECK(!c2.pollWaitEvent(1250));         // gated: ACK not read yet
     xfer(c2, BUSY_WORD, 1290);              // GBA reads the ACK
     CHECK(!c2.pollWaitEvent(1300));         // arms here
-    CHECK(c2.pollWaitEvent(1320));          // keepalive after one RF frame
-    CHECK_EQ(c2.eventWord(0), 0x99660000u | CMD_RESP_DATA);
+    CHECK(!c2.pollWaitEvent(1820));         // still inside the 533ms window
+    CHECK(c2.pollWaitEvent(1834));          // TIMEO anchored at 1300
+    CHECK_EQ(c2.eventWord(0), 0x99660000u | CMD_RESP_TIMEO);
     takeDelivery(c2);
 
     // 0x35 is a wait-class alias: the ACK must reverse roles too.
@@ -894,6 +897,82 @@ static void testSendClamp()
     CHECK_EQ(cfg.words[6], 0x101u);
 }
 
+//-//////////////////////////////////////////////////////////////////////////-//
+// Inbound FIFO: two distinct frames landing between two RECV polls must BOTH
+// be delivered, in order, exactly once (gpsp pkts[4] semantics). A latest-
+// wins buffer skipped the first — fatal for the games' seq'd UNI command and
+// block protocols (chat exit, trade data), which assume the lossless shared
+// RF frame clock.
+//-//////////////////////////////////////////////////////////////////////////-//
+
+static void testInboundFifo()
+{
+    const uint8_t f1[4] = { 0x11, 0x22, 0x33, 0x44 };
+    const uint8_t f2[4] = { 0x55, 0x66, 0x77, 0x88 };
+    const uint8_t z24[24] = {};
+
+    // Client side: two HOST_SENDs land before the game polls.
+    RfuCore c;
+    c.rand16 = &fixedRand;
+    c.reset();
+    login(c);
+    c.applyNetPacket(NET_BROADCAST, 0xAAAA, z24, 24, 0);
+    runCommand(c, CMD_CONNECT, { 0xAAAA }, 0);
+    c.applyNetPacket(NET_CONNECT_ACK, 0x00001234, z24, 4, 0);
+    CHECK_EQ(c.state, stClient);
+
+    c.applyNetPacket(NET_HOST_SEND, 4, f1, 4, 10);
+    c.applyNetPacket(NET_HOST_SEND, 4, f2, 4, 20);
+
+    auto r1 = runCommand(c, CMD_RECV_DATA, {}, 30);
+    CHECK_EQ(r1.words[0], 4u);
+    CHECK_EQ(r1.words[1], 0x44332211u);
+    auto r2 = runCommand(c, CMD_RECV_DATA, {}, 40);
+    CHECK_EQ(r2.words[0], 4u);
+    CHECK_EQ(r2.words[1], 0x88776655u);
+    auto r3 = runCommand(c, CMD_RECV_DATA, {}, 50);  // drained: zero count
+    CHECK_EQ(r3.words[0], 0u);
+
+    // Host side: two CLIENT_SENDs from the same slot queue and pop in order.
+    RfuCore h;
+    h.rand16 = &fixedRand;
+    h.reset();
+    login(h);
+    runCommand(h, CMD_HOST_START, {}, 0);
+    h.applyNetPacket(NET_CONNECT_REQ, 0, z24, 4, 0);
+    auto acc = runCommand(h, CMD_HOST_ACCEPT, {}, 0);
+    CHECK_EQ(acc.words.size(), 1u);
+    const uint16_t devid = acc.words[0] & 0xFFFF;
+
+    const uint32_t hd = (4u << 24) | devid;  // blen=4, slot 0
+    h.applyNetPacket(NET_CLIENT_SEND, hd, f1, 4, 10);
+    h.applyNetPacket(NET_CLIENT_SEND, hd, f2, 4, 20);
+
+    auto hr1 = runCommand(h, CMD_RECV_DATA, {}, 30);
+    CHECK_EQ(hr1.words[0], 4u << 8);         // per-slot byte-count bitfield
+    CHECK_EQ(hr1.words[1], 0x44332211u);
+    auto hr2 = runCommand(h, CMD_RECV_DATA, {}, 40);
+    CHECK_EQ(hr2.words[0], 4u << 8);
+    CHECK_EQ(hr2.words[1], 0x88776655u);
+    auto hr3 = runCommand(h, CMD_RECV_DATA, {}, 50);
+    CHECK_EQ(hr3.words[0], 0u);
+
+    // Overflow: gpsp tail-drops — depth 8, the 9th pending frame is shed and
+    // counted, the queued eight survive intact.
+    for (uint8_t i = 0; i < 9; i++)
+    {
+        const uint8_t fx[4] = { i, 0xAA, 0xBB, 0xCC };
+        c.applyNetPacket(NET_HOST_SEND, 4, fx, 4, 100 + i);
+    }
+    CHECK_EQ(c.counters.rxDropQueueFull, 1u);
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        auto rr = runCommand(c, CMD_RECV_DATA, {}, 200 + i);
+        CHECK_EQ(rr.words[0], 4u);
+        CHECK_EQ(rr.words[1] & 0xFF, i);
+    }
+}
+
 int main()
 {
     testFraming();
@@ -907,6 +986,7 @@ int main()
     testMaxPlayers();
     testPeerTable();
     testSendClamp();
+    testInboundFifo();
     testConnectRetry();
 
     if (g_failures == 0)
