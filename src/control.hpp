@@ -24,10 +24,12 @@ class Control
         GetFirmwareInfo = 0x0F
     };
 
-    // Firmware version: 2.4.2 (lossless inbound FIFO + WAIT rendezvous pacing)
+    // Firmware version: 2.4.17 (gentle symmetric trim drains standing lag —
+    // the stretched echo loop made games skip arming the battle-end barrier
+    // via Rfu_SetLinkStandbyCallback's silent busy-refusal)
     static constexpr uint8_t FW_VERSION_MAJOR = 2;
     static constexpr uint8_t FW_VERSION_MINOR = 4;
-    static constexpr uint8_t FW_VERSION_PATCH = 2;
+    static constexpr uint8_t FW_VERSION_PATCH = 17;
 
     enum class Mode
     {

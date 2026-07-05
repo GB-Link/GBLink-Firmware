@@ -128,6 +128,15 @@ constexpr uint32_t NET_DISCONNECT   = 0x04;  // 16 bytes
 constexpr uint32_t NET_HOST_SEND    = 0x05;  // 104 bytes (92 LE data bytes)
 constexpr uint32_t NET_CLIENT_SEND  = 0x06;  // 104 bytes
 constexpr uint32_t NET_CLIENT_ACK   = 0x07;  // 16 bytes
+// Celio extension (not in gpsp): child→host backpressure. Real adapters
+// never need it — both pumps ride the shared RF frame clock — but over the
+// relay the two game clocks are independent, and a jitter burst leaves a
+// standing backlog in the receiving adapter that the games cannot see or
+// drain (consumption is hard-capped at one frame per game frame). The child
+// signals when its inbound FIFO is deep; the host adapter then paces its
+// game's wait-data events so production dips below the child's consumption
+// until the backlog clears. hdata: bit0 = active, bits 8-15 = queue depth.
+constexpr uint32_t NET_FLOWCTL      = 0x08;  // 16 bytes
 
 inline int rfu1FrameSize(uint32_t ptype)
 {
@@ -137,7 +146,7 @@ inline int rfu1FrameSize(uint32_t ptype)
         case NET_HOST_SEND: case NET_CLIENT_SEND: return 104;
         case NET_CONNECT_REQ: case NET_CONNECT_ACK:
         case NET_CONNECT_NACK: case NET_DISCONNECT:
-        case NET_CLIENT_ACK:                     return 16;
+        case NET_CLIENT_ACK: case NET_FLOWCTL:   return 16;
         default:                                 return -1;
     }
 }
@@ -349,6 +358,13 @@ public:
     // resetLinkState). Saturating 4-bit when packed into telemetry.
     volatile uint8_t dbgWipeEvict = 0, dbgWipeNetDisc = 0, dbgWipeHostStart = 0,
                      dbgWipeCmdDisc = 0, dbgWipeReset = 0;
+    // Flow-control forensics: backpressure hints sent (child), paced data
+    // events while held (host), inbound FIFO high-water since last report,
+    // stale-tail sheds (host, 8-seq-frame units).
+    volatile uint8_t dbgFlowHints = 0, dbgFlowHolds = 0;
+    volatile uint8_t dbgFifoHigh = 0;
+    volatile uint8_t dbgSheds = 0;
+    volatile uint8_t dbgIdleRetx = 0;  // radio keepalive re-broadcasts (wraps)
 
     uint8_t dbgSlotOccupancy() const
     {
@@ -451,13 +467,48 @@ public:
             m_buf[2] = BUSY_WORD;
             m_plen = 3;
         }
-        else if (dataAvail())
+        // Client data events are PACED to the real adapter's cadence: one
+        // per RF frame (~16.7ms). The child's librfu MSC callback enqueues
+        // every delivered aggregate into the game's 20-slot recvQueue, which
+        // the game's main loop drains at exactly one per frame — and during
+        // held-keys streaming the drain path never skips (only all-zero
+        // frames are skipped, link_rfu_3.c:573-578). Unpaced, a relay burst
+        // resolves waits back-to-back (~2.7ms/cycle), ratchets that queue to
+        // its latched-full state and throws the games' FATAL "communication
+        // error / power OFF and ON" screen (F_RFU_ERROR_5|6|7). 16ms (vs the
+        // 16.74ms frame) leaves ~3Hz of headroom to drain our own inbound
+        // FIFO after a burst, well inside the game's HANDLE_RECV_QUEUE flow
+        // control envelope.
+        //
+        // A HOST is normally unpaced (its game consumes via 0x26 polls; its
+        // recvQueue is never used) — EXCEPT under child backpressure
+        // (NET_FLOWCTL): then its data events are held to flowDrainGapMs so
+        // its game's pump — and with it, production — runs at ~half rate
+        // while the child drains its standing backlog at full consumption
+        // speed. This bounds the inter-game lag that a jitter burst would
+        // otherwise turn into a permanent sync offset (one side reaching a
+        // battle's end while the other is still seconds in the past).
+        else if (dataAvail() && timeReached(nowMs, m_nextDataEvtMs))
         {
+            // Under a peer hint, both roles trim to the gentle gap (~9%
+            // slower); otherwise clients pace at the RF frame and hosts
+            // resolve immediately (their game is the 60Hz cap).
+            const bool trimmed = !timeReached(nowMs, m_flowHoldUntilMs);
+            if (trimmed)
+                m_nextDataEvtMs = nowMs + flowTrimGapMs;
+            else if (state == stClient)
+                m_nextDataEvtMs = nowMs + dataEventGapMs;
+            else
+                m_nextDataEvtMs = 0;
             m_buf[0] = 0x99660000 | CMD_RESP_DATA;
             m_buf[1] = BUSY_WORD;
             m_plen = 2;
         }
-        else if (state == stHost && timeReached(nowMs, m_rtxDeadlineMs))
+        // rtx must not preempt paced-out data: with frames pending but the
+        // delivery gated, resolving the wait "empty" would defeat the pacing
+        // and hand the game a no-data frame it didn't need to see.
+        else if (state == stHost && !dataAvail() &&
+                 timeReached(nowMs, m_rtxDeadlineMs))
         {
             // The simulated retransmission window elapsed without client
             // data — report "no response" exactly as gpsp does.
@@ -513,6 +564,107 @@ public:
             if (p.valid && static_cast<int32_t>(nowMs - p.lastSeenMs) >
                                static_cast<int32_t>(peerTtlMs))
                 p.valid = false;
+
+        // Idle retransmission — the real radio's autonomous re-broadcast of
+        // the current send buffer, one per RF frame. When a game goes quiet
+        // (flash save; standby barriers; scene transitions) a real adapter's
+        // carrier keeps delivering its last frame at 60Hz, and BOTH the peer
+        // game's link supervision (~5s giveups) and the child's entire pump
+        // cadence (MSC per RF frame) are calibrated against that. Without
+        // it, a quiet parent drops the child's pump to the 533ms TIMEO
+        // crawl — the battle-end standby barrier then takes 5+ seconds on
+        // one side and the games diverge into the save/room overlap desync.
+        //
+        // Direction asymmetry, both halves forced by the games' code:
+        //  - HOST re-broadcasts ANY content: the child validates nothing
+        //    (librfu overwrites without dedup — real RF hands the child the
+        //    parent's re-broadcast as fresh data every frame) and every
+        //    consumer is dup-tolerant (level-coded keys, one-shot guards,
+        //    idempotent block bitmasks, generation-checked standby).
+        //  - CLIENT re-broadcasts only ALL-ZERO frames: a replayed non-zero
+        //    child frame repeats its 3-bit seq and the parent's +1-mod-8
+        //    check treats consecutive duplicates as link failure. Zeros are
+        //    exempt and suffice as carrier/liveness; the parent's pump
+        //    self-clocks (rtx) and never needs child data to advance.
+        if (m_txDirty)
+        {
+            m_lastUniTxMs = nowMs;
+            m_carrierOn = false;
+            m_txDirty = false;
+        }
+        // NOT gated on m_txBuf.blen: the games issue ZERO-LENGTH sends
+        // ("nothing to say") during the win/save screens — one of those
+        // used to disarm the carrier exactly when the peer depended on it,
+        // dropping the peer's pump to the 533ms crawl and firing its ~6s
+        // giveup (test #57). blen=0 falls through to the natural-size zero
+        // frame in emitUniCarrier.
+        else if ((state == stClient || state == stHost) &&
+                 (nowMs - m_lastUniTxMs) >=
+                     (m_carrierOn ? idleRetxGapMs : idleRetxStartMs))
+        {
+            // ENGAGE LATE, RUN AT RF CADENCE: the threshold to start the
+            // carrier is several frame periods, because at one frame period
+            // it RACES the live 59.7Hz stream — any send landing a hair
+            // late gets a zero frame slipped in ahead of it, the zeros eat
+            // the receiver's paced delivery slots, real throughput halves
+            // and the games grind to a crawl (test #55). Active streams
+            // never gap 60ms; genuine quiets (standby barrier, saves) are
+            // picked up after 60ms — still ~9x faster than the 533ms TIMEO
+            // crawl this exists to prevent.
+            m_carrierOn = true;
+            // CADENCE WITHOUT CONTENT: when the buffer is non-zero, a zero
+            // frame of the same shape is synthesized instead of repeating
+            // it. Repeating content is how the real radio does it, but our
+            // transport is lossless — nobody needs the repetition — and
+            // repeated non-zero frames are actively fatal here: they DO
+            // enqueue into the peer game's 20-slot recvQueue (only all-zero
+            // aggregates are skipped), they hold the room-entry gate
+            // (recvQueue<=2) open forever, and a parent quiet mid-block
+            // re-broadcasting an 0x89 chunk at 60Hz ratchets the child's
+            // game straight into its latched-full reboot fatal (test #54).
+            // All-zero frames give the peer everything it actually needs:
+            // the child's pump clock (MSC per RF frame) and liveness.
+            emitUniCarrier();
+            dbgIdleRetx = dbgIdleRetx + 1;
+            m_lastUniTxMs = nowMs;
+        }
+
+        // GENTLE symmetric backpressure (v2: the 2.4.5 brake halved the
+        // peer's pump — 33ms events — and split the games by ~10s at battle
+        // end; retired in 2.4.13). Standing inbound queues (10-16 frames of
+        // REAL content that never drains — consumption is capped at the
+        // game's frame rate) stretch the games' echo round-trip ~10x, and
+        // that stretch lands the final block-send's echo-verify callback
+        // inside the battle-end Rfu_SetLinkStandbyCallback window — which
+        // SILENTLY SKIPS arming when gRfu.callback is busy (link_rfu_2.c:
+        // 1595-1601): the skipper races to win/lose+save+room while its
+        // partner waits black at the barrier for a ready-signal that only
+        // comes at the skipper's NEXT standby. The trim here paces the
+        // AHEAD side ~9% (16→18ms), draining a 16-frame backlog in ~4s of
+        // ordinary play — imperceptible, safe during block exchanges, and
+        // symmetric (both roles hint, both roles brake).
+        {
+            const uint8_t depth = (state == stClient)
+                                      ? m_client.pkt.count
+                                      : maxHostSlotDepth();
+            if (!m_flowActive && depth >= flowHighWater)
+            {
+                m_flowActive = true;
+                m_lastFlowHintMs = nowMs;
+                dbgFlowHints = dbgFlowHints + 1;
+                emitCmd(NET_FLOWCTL, 1u | (static_cast<uint32_t>(depth) << 8));
+            }
+            else if (m_flowActive && depth <= flowLowWater)
+            {
+                m_flowActive = false;
+                emitCmd(NET_FLOWCTL, 0);
+            }
+            else if (m_flowActive && (nowMs - m_lastFlowHintMs) >= flowRehintMs)
+            {
+                m_lastFlowHintMs = nowMs;
+                emitCmd(NET_FLOWCTL, 1u | (static_cast<uint32_t>(depth) << 8));
+            }
+        }
 
         if (state == stConnecting)
         {
@@ -693,8 +845,27 @@ public:
                     {
                         // ACK so the host knows we are alive
                         emitCmd(NET_CLIENT_ACK, m_client.devid | (m_client.clnum << 16));
+                        // An ALL-ZERO frame (idle stream or carrier) only
+                        // exists to tick our GBA's pump — one pending frame
+                        // does that; stacking them is pure harm. During a
+                        // save the game drains nothing while the peer's
+                        // carrier runs at 60Hz: zeros pegged the FIFO at
+                        // 32/32 and the peer's REAL end-of-battle frames
+                        // tail-dropped behind them ("one GBA misses the
+                        // end game sequence", test #58). Enqueue a zero
+                        // only when the queue is empty; real frames still
+                        // queue in full order.
+                        {
+                            bool allZero = true;
+                            for (uint32_t zi = 0; zi < blen && allZero; zi++)
+                                if (payload[zi]) allZero = false;
+                            if (allZero && m_client.pkt.pending())
+                                break;
+                        }
                         m_client.pkt.push(payload, static_cast<uint8_t>(blen),
                                           counters.rxDropQueueFull);
+                        if (m_client.pkt.count > dbgFifoHigh)
+                            dbgFifoHigh = m_client.pkt.count;
                     }
                 }
                 break;
@@ -709,9 +880,33 @@ public:
                     if (m_host.clients[clid].devid == cdevid && blen <= 16 && plen >= blen)
                     {
                         m_host.clients[clid].lastHeardMs = nowMs;
+                        // FULLY-zero child frames are pure no-ops to the
+                        // parent's game (an empty poll reads identically,
+                        // and the game's own enqueue discards all-zero
+                        // aggregates) — but queued they are dead weight:
+                        // a screen-transition burst of zeros stood 13 deep
+                        // for a whole end-of-battle sequence, adding ~220ms
+                        // of lag the shed couldn't touch (zeros carry no
+                        // seq steps). Don't queue them; liveness is
+                        // lastHeardMs, above. The check must be the WHOLE
+                        // payload: byte0 alone can carry meaning — the LL
+                        // comm=0 close frame is 80 00 (a byte1-only check
+                        // ate it and stalled every contact at ENDING), and
+                        // a zero-cmd frame with an ack nibble in byte0
+                        // advances the parent's block sends.
+                        {
+                            bool allZero = true;
+                            for (uint32_t zi = 0; zi < blen && allZero; zi++)
+                                if (payload[zi]) allZero = false;
+                            if (allZero)
+                                break;
+                        }
                         m_host.clients[clid].pkt.push(payload,
                                                       static_cast<uint8_t>(blen),
                                                       counters.rxDropQueueFull);
+                        if (m_host.clients[clid].pkt.count > dbgFifoHigh)
+                            dbgFifoHigh = m_host.clients[clid].pkt.count;
+                        shedStaleTail(m_host.clients[clid].pkt);
                     }
                 }
                 break;
@@ -723,6 +918,14 @@ public:
                     if (m_host.clients[clid].devid == (hdata & 0xFFFF))
                         m_host.clients[clid].lastHeardMs = nowMs;
                 }
+                break;
+
+            case NET_FLOWCTL:
+                // The peer's inbound queue is standing deep — WE are the
+                // ahead side. Apply the gentle trim (see tick()); expires
+                // so a lost clear can't stick, peer re-hints while deep.
+                m_flowHoldUntilMs = (hdata & 1) ? nowMs + flowHoldMs : nowMs;
+                dbgFlowHolds = dbgFlowHolds + 1;
                 break;
 
             default:
@@ -762,6 +965,9 @@ public:
         m_syscfg = (defRtxMax << 8) | defTimeoutFrames;
         m_waitArmed = false;
         m_waitAckRead = false;
+        m_nextDataEvtMs = 0;
+        m_flowActive = false;
+        m_flowHoldUntilMs = 0;
         m_host = HostState{};
         m_client = ClientState{};
         for (auto& p : m_peers) p = PeerBcast{};
@@ -777,6 +983,21 @@ private:
     static constexpr uint32_t clientTimeoutMs = 4000; // 240 frames
     static constexpr uint32_t connectRetryMs = 300;   // RF connect-retry cadence
     static constexpr uint8_t  connectRetryMax = 8;    // ≈ the game's connect window
+    static constexpr uint32_t dataEventGapMs = 16;    // ≈ one RF frame (16.74ms)
+    // Backpressure: child hints at highWater, clears at lowWater; the host
+    // paces data events to flowDrainGapMs while held (child keeps consuming
+    // at 60Hz → backlog drains ~30/s). Hold auto-expires so a lost clear
+    // can't stick; the child re-hints while still deep.
+    static constexpr uint8_t  flowHighWater = 6;
+    static constexpr uint8_t  flowLowWater = 2;
+    static constexpr uint32_t flowRehintMs = 150;
+    static constexpr uint32_t flowHoldMs = 300;
+    static constexpr uint32_t flowTrimGapMs = 18;     // gentle ~9% trim
+    // Host-side stale-tail shed: at >= this many seq-carrying child frames
+    // queued for one slot, drop the oldest 8 (one full mod-8 seq wrap).
+    static constexpr uint8_t  hostShedAtSeqFrames = 10;
+    static constexpr uint32_t idleRetxGapMs = 17;     // radio re-broadcast cadence
+    static constexpr uint32_t idleRetxStartMs = 60;   // quiet threshold to engage
 
     // Inbound packet FIFO (≙ gpsp's pkts[4], rfu.c:138-153). The games' UNI
     // command/block protocols (chat exit, trade data) assume the lossless
@@ -810,6 +1031,16 @@ private:
 
         bool pending() const { return count != 0; }
 
+        const uint8_t* peek(uint8_t i) const { return q[(head + i) % DEPTH]; }
+        uint8_t peekLen(uint8_t i) const { return qlen[(head + i) % DEPTH]; }
+
+        void dropFront(uint8_t n)
+        {
+            if (n > count) n = count;
+            head = (head + n) % DEPTH;
+            count -= n;
+        }
+
         // Pop the front frame; 0 = queue empty (gpsp returns a zero
         // byte-count header then, never a stale copy). The returned pointer
         // stays valid until the next push — callers copy it out within the
@@ -829,7 +1060,10 @@ private:
     {
         uint16_t devid = 0;          // 0 = empty slot
         uint32_t lastHeardMs = 0;
-        PktQueue<16, 8> pkt = {};
+        // Depth 32: must absorb browser-side stall-then-burst delivery
+        // (~300ms tab pauses ≈ 18 frames) without dropping — a dropped
+        // nonzero child frame is a seq gap the parent's game never forgives.
+        PktQueue<16, 32> pkt = {};
     };
     struct HostState
     {
@@ -847,7 +1081,10 @@ private:
     {
         uint16_t devid = 0;
         uint8_t clnum = 0;
-        PktQueue<128, 8> pkt = {};
+        // Depth 32, drained at the paced ~62Hz — rides out ~500ms of
+        // upstream jitter; a dropped host frame can hang a block transfer
+        // (chunks are sent exactly once, no re-request on the child).
+        PktQueue<128, 32> pkt = {};
     };
     struct PeerBcast
     {
@@ -877,6 +1114,15 @@ private:
     uint32_t m_syscfg = (defRtxMax << 8) | defTimeoutFrames;  // raw 0x17 payload (CFGSTAT echoes it)
     uint32_t m_waitDeadlineMs = 0;
     uint32_t m_rtxDeadlineMs = 0;
+    uint32_t m_nextDataEvtMs = 0;   // data-event pacer (client: RF frame; host: drain hold)
+    // Backpressure state: child side (hint emission) + host side (hold).
+    bool m_flowActive = false;
+    uint32_t m_lastFlowHintMs = 0;
+    uint32_t m_flowHoldUntilMs = 0;
+    // Idle-retransmission state (the radio's autonomous re-broadcast).
+    bool m_txDirty = false;
+    bool m_carrierOn = false;
+    uint32_t m_lastUniTxMs = 0;
     // Latches once the wait deadlines have been armed for the current
     // comWaitEvent (armed lazily on the first pollWaitEvent, which has nowMs).
     bool m_waitArmed = false;
@@ -935,6 +1181,15 @@ private:
             if (!m_host.clients[i].devid)
                 return static_cast<uint8_t>(i);
         return 0xFF;
+    }
+
+    uint8_t maxHostSlotDepth() const
+    {
+        uint8_t d = 0;
+        for (const auto& c : m_host.clients)
+            if (c.devid && c.pkt.count > d)
+                d = c.pkt.count;
+        return d;
     }
 
     bool dataAvail() const
@@ -1050,6 +1305,133 @@ private:
         m_lastRx = rx;
     }
 
+    // Host-side stale-tail shed. During held-keys streaming the parent's
+    // game FREEWHEELS past missing child data (the 11ms rtx event advances
+    // it with an empty slot), so once a child falls behind, its late
+    // catch-up frames land at a parent that is already past them — and with
+    // both games' link pumps capped at one step per frame, that tail can
+    // never drain: it becomes a permanent child->parent lag (one side
+    // finishing a battle seconds before the other). THOSE frames are dead
+    // and sheddable in units of EXACTLY 8 seq STEPS, which is invisible to
+    // the parent game's 3-bit +1-mod-8 check (seq +9 ≡ +1).
+    //
+    // Two hard constraints, both learned on hardware:
+    //  - CONTENT: only held-keys frames with empty/dpad codes freewheel.
+    //    Block chunks (0x89 etc.) are data the parent's game actively
+    //    WAITS on (GetBlockReceivedStatus) — a deep queue of those is
+    //    required backlog; shedding 8 mid-battle chunks stalls the block
+    //    FSM into its ~1s link error. Any non-freewheelable frame in the
+    //    window vetoes the shed.
+    //  - STEPS, not frames: the child's backup-queue re-sends duplicate
+    //    frames with an UNCHANGED seq whenever our delivery briefly
+    //    outruns its game, so 8 frames != 8 seq steps; dups are dropped
+    //    alongside their step without counting.
+    // Zero-cmd frames don't participate in the sequence (link_rfu_2.c:
+    // 876-907 gates on a nonzero cmd byte) and shed alongside freely.
+    void shedStaleTail(PktQueue<16, 32>& q)
+    {
+        const auto seqCarrying = [&](uint8_t i) {
+            return q.peekLen(i) >= 2 && q.peek(i)[1] != 0;
+        };
+        const auto freewheelable = [&](uint8_t i) {
+            if (q.peekLen(i) < 3) return false;
+            const uint8_t* p = q.peek(i);
+            if (p[1] != 0xBE) return false;  // RFUCMD_SEND_HELD_KEYS only
+            const uint8_t key = p[2];        // LINK_KEY_CODE_*: empty/dpad
+            return key == 0 || (key >= 0x11 && key <= 0x15);
+        };
+
+        // Total distinct seq steps queued — the real standing depth.
+        int last = -1;
+        uint8_t total = 0;
+        for (uint8_t i = 0; i < q.count; i++)
+        {
+            if (!seqCarrying(i)) continue;
+            const int s = q.peek(i)[0] >> 5;
+            if (s != last) { total++; last = s; }
+        }
+        if (total < hostShedAtSeqFrames) return;
+
+        // Find the first frame of step 9 (the drop boundary), vetoing if
+        // any seq-carrying frame inside the 8-step window is not dead.
+        last = -1;
+        uint8_t steps = 0;
+        for (uint8_t i = 0; i < q.count; i++)
+        {
+            if (!seqCarrying(i)) continue;
+            const int s = q.peek(i)[0] >> 5;
+            if (s != last)
+            {
+                if (steps == 8)
+                {
+                    q.dropFront(i);
+                    dbgSheds = dbgSheds + 1;
+                    return;
+                }
+                steps++;
+                last = s;
+            }
+            if (!freewheelable(i)) return;
+        }
+    }
+
+    // Emit an all-zero carrier frame: the current buffer's shape, or the
+    // mode's natural frame size when the game's last send was zero-length.
+    // The content is ALWAYS zeros — never a repeat of live data (a repeated
+    // child seq trips the parent's dup detection; repeated non-zero
+    // aggregates ratchet the child game's 20-slot recvQueue).
+    void emitUniCarrier()
+    {
+        static constexpr uint32_t zeros[23] = {};
+        if (state == stHost)
+        {
+            uint32_t blen = m_txBuf.blen ? m_txBuf.blen : 70u;
+            if (blen > 90) blen = 90;
+            for (const auto& c : m_host.clients)
+                if (c.devid)
+                {
+                    emitData(NET_HOST_SEND, blen, zeros, blen);
+                    break;
+                }
+        }
+        else if (state == stClient)
+        {
+            uint32_t blen = m_txBuf.blen ? m_txBuf.blen : 14u;
+            if (blen > 16) blen = 16;
+            emitData(NET_CLIENT_SEND,
+                     (blen << 24) | (m_client.clnum << 16) | m_client.devid,
+                     zeros, blen);
+        }
+    }
+
+    // Emit the current UNI staging buffer to the peer(s) (≙ the RF frame
+    // carrying the send buffer). Used by the SEND commands and by the idle
+    // retransmitter in tick().
+    void emitUniTx()
+    {
+        if (state == stHost)
+        {
+            // One frame regardless of client count — the relay fans it
+            // out to every connected client (the real adapter's host
+            // payload is broadcast to all children over the air too).
+            if (m_txBuf.blen <= 90)
+                for (const auto& c : m_host.clients)
+                    if (c.devid)
+                    {
+                        emitData(NET_HOST_SEND, m_txBuf.blen, m_txBuf.buf, m_txBuf.blen);
+                        break;
+                    }
+        }
+        else if (state == stClient)
+        {
+            if (m_txBuf.blen <= 16)
+                emitData(NET_CLIENT_SEND,
+                         (static_cast<uint32_t>(m_txBuf.blen) << 24) |
+                             (m_client.clnum << 16) | m_client.devid,
+                         m_txBuf.buf, m_txBuf.blen);
+        }
+    }
+
     void restartIdExchange()
     {
         comstate = comIdWait;
@@ -1090,6 +1472,11 @@ private:
         m_syscfg = (defRtxMax << 8) | defTimeoutFrames;
         m_waitArmed = false;
         m_waitAckRead = false;
+        m_nextDataEvtMs = 0;
+        m_flowActive = false;
+        m_flowHoldUntilMs = 0;
+        m_txDirty = false;
+        m_carrierOn = false;
     }
 
     void finishCommand()
@@ -1440,29 +1827,10 @@ private:
                 }
                 [[fallthrough]];
             case CMD_RTX_WAIT:
-                if (state == stHost)
-                {
-                    // One frame regardless of client count — the relay fans it
-                    // out to every connected client (the real adapter's host
-                    // payload is broadcast to all children over the air too).
-                    if (m_txBuf.blen <= 90)
-                        for (const auto& c : m_host.clients)
-                            if (c.devid)
-                            {
-                                emitData(NET_HOST_SEND, m_txBuf.blen, m_txBuf.buf, m_txBuf.blen);
-                                break;
-                            }
-                }
-                else if (state == stClient)
-                {
-                    if (m_txBuf.blen <= 16)
-                        emitData(NET_CLIENT_SEND,
-                                 (static_cast<uint32_t>(m_txBuf.blen) << 24) |
-                                     (m_client.clnum << 16) | m_client.devid,
-                                 m_txBuf.buf, m_txBuf.blen);
-                }
-                else
+                if (state != stHost && state != stClient)
                     return -1;
+                emitUniTx();
+                m_txDirty = true;  // tick() stamps m_lastUniTxMs (it has the clock)
                 return 0;
 
             case CMD_RECV_DATA:

@@ -93,6 +93,7 @@ struct ParkedFrame
 static constexpr uint8_t kParkedMax = 8;
 static ParkedFrame g_parked[kParkedMax];
 static volatile uint8_t g_parkedCount = 0;
+static volatile uint8_t g_parkedDrops = 0;
 
 static uint16_t randTrampoline(void*)
 {
@@ -141,9 +142,20 @@ static void frameTrampoline(void*, uint32_t ptype, uint32_t hdata,
     // (see safeToApplyInbound). Beacons repeat and are safe to drop when they
     // can't apply; anything else is PARKED and drained by the section thread
     // a poll-tick later, so nothing is swallowed.
-    if (!safeToApplyInbound(g_core.comstate))
+    //
+    // ORDER MATTERS: once anything is parked, every later frame must park
+    // behind it even if the comstate is safe again — a live apply would
+    // overtake the parked frame, and a swapped pair of child UNI frames
+    // trips the parent game's +1-mod-8 seq check, which never resyncs
+    // (pokefirered link_rfu_2.c:882-889): one reorder = disconnect five
+    // frames later. This bit exactly during rtx-resolved waits (11ms wait +
+    // ~10ms event delivery > the 17ms frame spacing).
+    if (!safeToApplyInbound(g_core.comstate) || g_parkedCount > 0)
     {
         if (ptype == rfuproto::NET_BROADCAST) return;
+        // The park runs under irq_lock: the section thread's drain compaction
+        // must not interleave with a half-written slot.
+        const unsigned int key = irq_lock();
         if (g_parkedCount < kParkedMax && payloadLen <= sizeof(g_parked[0].payload))
         {
             ParkedFrame& p = g_parked[g_parkedCount];
@@ -153,6 +165,13 @@ static void frameTrampoline(void*, uint32_t ptype, uint32_t hdata,
             std::memcpy(p.payload, payload, payloadLen);
             g_parkedCount = g_parkedCount + 1;
         }
+        else
+            g_parkedDrops = g_parkedDrops + 1;  // silent loss = a seq gap: count it
+        irq_unlock(key);
+        // Wake the section thread so the drain runs on the next pass instead
+        // of after the 1ms poll tick — parked frames otherwise add up to a
+        // full pump-cycle of latency per arrival.
+        k_sem_give(&g_rfuNetRxSem);
         return;
     }
 
@@ -197,6 +216,7 @@ RfuProtocolSection::RfuProtocolSection(uint8_t role)
     g_retriesThisWait = 0;
     g_sdResets = 0;
     g_parkedCount = 0;
+    g_parkedDrops = 0;
     g_stallValid = false;
     g_waitTracked = false;
     g_sessionActive = true;
@@ -617,7 +637,9 @@ void RfuProtocolSection::reportDiagnostics(uint32_t nowMs)
     const uint32_t lev = g_core.dbgLastEvent;
     const uint32_t lpw = g_core.dbgLastLinkPwr;
     const auto sat4 = [](uint8_t v) -> uint8_t { return v > 15 ? 15 : v; };
-    const uint8_t ev[18] = {
+    const uint8_t fifoHigh = g_core.dbgFifoHigh;
+    g_core.dbgFifoHigh = 0;  // per-interval high-water
+    const uint8_t ev[25] = {
         0x1D,
         g_core.dbgEvData, g_core.dbgEvRtx, g_core.dbgEvTimeo, g_core.dbgEvDisc,
         static_cast<uint8_t>(lev),       static_cast<uint8_t>(lev >> 8),
@@ -629,6 +651,23 @@ void RfuProtocolSection::reportDiagnostics(uint32_t nowMs)
         static_cast<uint8_t>((sat4(g_core.dbgWipeEvict) << 4) | sat4(g_core.dbgWipeNetDisc)),
         static_cast<uint8_t>((sat4(g_core.dbgWipeHostStart) << 4) | sat4(g_core.dbgWipeCmdDisc)),
         static_cast<uint8_t>((sat4(g_core.dbgWipeReset) << 4) | g_core.dbgSlotOccupancy()),
+        // Inbound-loss forensics: any nonzero here = seq gaps handed to the
+        // games (parked-queue overflow / FIFO tail-drops).
+        g_parkedDrops,
+        static_cast<uint8_t>(g_core.counters.rxDropQueueFull > 255
+                                 ? 255
+                                 : g_core.counters.rxDropQueueFull),
+        // Flow control: FIFO high-water this interval + hint/hold nibbles +
+        // host stale-tail sheds (8-seq-frame units).
+        fifoHigh,
+        static_cast<uint8_t>((sat4(g_core.dbgFlowHints) << 4) | sat4(g_core.dbgFlowHolds)),
+        g_core.dbgSheds,
+        g_core.dbgIdleRetx,
+        // GBA command counter (mod 256): per-interval delta shows whether
+        // THIS GBA's pump is issuing commands — a frozen main loop (flash
+        // save) vs an idle adapter are indistinguishable without it, and
+        // the librfu 360-frame watchdog death hinges on exactly that.
+        static_cast<uint8_t>(g_core.counters.commands),
     };
     Transport::sendData(std::span<const uint8_t>(ev, sizeof(ev)));
 
