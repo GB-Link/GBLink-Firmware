@@ -1,0 +1,58 @@
+.program pio_slave_multi
+
+; Multi-slot slave: the attached GBA is the MULTI-mode parent and this adapter
+; presents the remaining players as children. Each frame: receive the parent's
+; word (slot 0), then transmit the child words back-to-back on SD while
+; holding SO low. The parent attributes them to children by timing, so one
+; adapter emitting several UART words in succession presents as that many
+; children. The TX FIFO is fed one word per child slot by pioIsr_tx.
+;
+; This is the 3-child (4-player) variant. The 2-child (3-player) variant is
+; identical except the child loop count (set y, 1 instead of set y, 2); both
+; are kept as fixed programs in linkLayer_pio.c.
+
+.define SD_PIN_OUT 1
+.define SD_PIN_IN 1
+
+.define RX_TX_DONE_FLAG 0
+.define TX_VALUE_FLAG 1
+
+.wrap_target
+
+; pins SD | SO | SI | SC
+set pins, 0b1000           ; SD high, SO low so the GBA runs as master
+set pindirs, 0b0100        ; SD input, SO output
+
+set x, 15
+wait 0 pin 0               ; parent SC strobe = frame start
+irq TX_VALUE_FLAG [23]     ; stage the child words while waiting out the start bit
+
+receive_data:
+    in pins, SD_PIN_IN [14]
+    jmp x-- receive_data
+
+push                       ; the parent's word
+
+set pins, 0b1000
+set pindirs, 0b1100        ; SD output for the child slots
+
+nop [31]
+
+set y, 2                   ; 3 child slots
+
+child_loop:
+    set x, 15
+    pull block             ; next child word from pioIsr_tx
+
+    set pins, 0b0000 [16]  ; UART start bit
+    transmit_data:
+        out pins, SD_PIN_OUT [14]
+        jmp x-- transmit_data
+    set pins, 0b1000 [16]  ; UART stop bit
+
+    jmp y-- child_loop
+
+irq RX_TX_DONE_FLAG        ; frame done
+nop [31]
+
+.wrap

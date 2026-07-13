@@ -1,0 +1,78 @@
+.program pio_master_multi
+
+; Master-side multi-slot, ARBITRARY SEAT. The attached GBA is a child at seat
+; cartSeat (1..N-1) in an N-player MULTI session; the adapter is the bus master.
+; One unified loop walks all N slots (Y = slot countdown N-1..0; slot index =
+; (N-1)-Y). At every slot it transmits a word on SD (SO high) EXCEPT at the
+; GBA's slot, where it forwards SO low and reads the GBA's word. The GBA's slot
+; is reached when Y == slotsAfter (= (N-1)-cartSeat), held in X; after the
+; receive X is set to a sentinel (31) so no second receive fires.
+;
+; Transmit counts 16 bits via the OSR shift counter (out_shift threshold = 16,
+; "jmp !osre") so X stays free for the slot/bit bookkeeping. The receive uses X
+; for its own 16-bit count.
+;
+; ISR feeds the TX FIFO: [packed, w0, w1, ... w(N-2)] where
+;   packed = (slotsAfter << 8) | (N-1)
+; and the N-1 words are the slots the adapter drives (all but the GBA's), in
+; order. That is N entries total -> fits the 4-deep FIFO for up to 4 players.
+;
+; pins: SD | SO | SI | SC  (set base = SC: bit0=SC, bit1=SI, bit2=SO, bit3=SD)
+
+.define SD_PIN_OUT 1
+.define SD_PIN_IN 1
+.define RX_TX_DONE_FLAG 0
+.define TX_VALUE_FLAG 1
+
+.wrap_target
+
+set pindirs, 0b1101        ; SD, SO, SC = output; SI = input
+set pins, 0b1101           ; idle: SD=1, SO=1, SC=1
+
+irq TX_VALUE_FLAG
+set x, 31                  ; wait-for-ISR + inter-frame pacing (~536us)
+wait_tx:
+    jmp x-- wait_tx [31]
+
+pull                       ; packed = (slotsAfter << 8) | (N-1)
+out y, 8                   ; Y = N-1   (slot countdown)
+out x, 8                   ; X = slotsAfter (receive-trigger)
+set pindirs, 0b1101        ; SD = output
+set pins, 0b1100           ; SC low (start of frame)
+
+slot_loop:
+    jmp x!=y do_transmit   ; transmit unless this is the GBA's slot (Y == slotsAfter)
+
+    ; --- the GBA's slot: forward SO low, then receive its word ---
+    set pins, 0b1000       ; SO low -> forwards to the GBA's SI (its turn)
+    set pindirs, 0b0101    ; SD = input
+    set x, 31
+    wait_rx:
+        jmp x-- check_rx [7]
+    check_rx:
+        jmp !x rx_begin    ; timed out -> sample anyway
+        jmp pin wait_rx    ; SD high (idle) -> wait for the start bit
+    rx_begin:
+        set x, 15 [22]
+    rx_data:
+        in pins, SD_PIN_IN [14]
+        jmp x-- rx_data
+    push [16]              ; the GBA's word -> RX FIFO
+    set pindirs, 0b1101    ; SD = output
+    set x, 31              ; sentinel: Y never equals 31 again -> no 2nd receive
+    jmp slot_next
+
+do_transmit:
+    pull                   ; word for this slot
+    set pins, 0b0100 [15]  ; UART start bit (SD low, SO high)
+    tx_bits:
+        out pins, SD_PIN_OUT [14]
+        jmp !osre tx_bits  ; 16 data bits (OSR threshold = 16)
+    set pins, 0b1100 [15]  ; UART stop bit (SD high, SO high)
+
+slot_next:
+    jmp y-- slot_loop
+
+set pins, 0b1100 [30]      ; hold, SC low
+irq RX_TX_DONE_FLAG
+.wrap

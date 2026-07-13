@@ -6,6 +6,7 @@
 #include "module/emu.hpp"
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
+#include "module/multiLink.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
@@ -51,6 +52,7 @@ public:
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
         const uint8_t awVariant = m_awVariant;
+        const uint8_t setByte3 = m_setByte3;
         sendLinkStatus(LinkStatus::DeviceReady);
 
         switch (mode)
@@ -76,11 +78,28 @@ public:
                 applyLedForSlot(LED_SLOT_GBA);
                 link_detectCableType();
 
-                Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
+                // SetMode payload: byte2 = seat (0 = host), byte3 = player
+                // count. 3-4 players use the multi-slot link; 2 players (or a
+                // client sending the short SetMode) use the 2-player path,
+                // which also keeps the emulator plugin protocol working.
+                const uint8_t seat = awVariant;
+                const uint8_t playerCount = setByte3;
+                if (playerCount >= 3)
+                {
+                    Transport::registerDataHandler(multiLink_receiveHandler, nullptr);
 
-                LinkModule linkModule;
-                m_currentModule = &linkModule;
-                linkModule.execute();
+                    MultiLinkModule multiLinkModule(seat, playerCount);
+                    m_currentModule = &multiLinkModule;
+                    multiLinkModule.execute();
+                }
+                else
+                {
+                    Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
+
+                    LinkModule linkModule;
+                    m_currentModule = &linkModule;
+                    linkModule.execute();
+                }
 
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
@@ -132,6 +151,7 @@ private:
     struct k_sem m_waitForModeSemaphore;
     Mode m_mode;
     uint8_t m_awVariant = 0;
+    uint8_t m_setByte3 = 0;
 
     IModule* m_currentModule = nullptr;
 
@@ -176,8 +196,13 @@ private:
             // clients that send only [command, mode]).
             case ControlCommand::SetMode:
                 if (data.size() < 2) return;
+                // Unknown mode id (e.g. a stale cached client): ignore rather
+                // than ack, so the client's ready-wait times out visibly
+                // instead of reporting a mode that never ran.
+                if (data[1] > static_cast<uint8_t>(Mode::advanceWars)) return;
                 return callSetMode(static_cast<Mode>(data[1]),
-                                   data.size() >= 3 ? data[2] : 0);
+                                   data.size() >= 3 ? data[2] : 0,
+                                   data.size() >= 4 ? data[3] : 0);
             case ControlCommand::Cancel: return callCancel();
             case ControlCommand::EnterGBPrinter: return callSetMode(Mode::gbPrinter);
             case ControlCommand::GetFirmwareInfo: return callGetFirmwareInfo();
@@ -246,10 +271,11 @@ private:
     // CALLS
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-    void callSetMode(Mode mode, uint8_t variant = 0)
+    void callSetMode(Mode mode, uint8_t variant = 0, uint8_t variant2 = 0)
     {
         m_mode = mode;
         m_awVariant = variant;
+        m_setByte3 = variant2;
         // If a mode is already running, cancel it so executeMode unblocks and
         // switches to the new mode (otherwise SetMode would queue behind a mode
         // that never exits). Same cancel path the web "cancel" command uses.
