@@ -32,3 +32,15 @@ enum LinkMode link_getMode();
 void link_changeMode(enum LinkMode mode);
 
 void link_detectCableType(void);
+
+uint8_t link_getDetectedCableType(void);
+void link_setCableOverride(uint8_t mode);
+void link_flipSdPath(void);
+uint32_t link_getReceivedWordCount(void);
+
+void link_configurePartnerPresence(void);
+uint8_t link_readPartnerPins(void);
+void link_releasePartnerPins(void);
+
+void link_configurePokemonSlave(void);
+void link_configureMultiSlave(void);

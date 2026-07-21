@@ -90,10 +90,24 @@ public:
         };
     }
 
+    bool tryAwaitTransiveResults(TransiveResult& result, k_timeout_t timeout)
+    {
+        if (k_sem_take(&m_commandTransiveSemaphore, timeout) != 0) return false;
+        result = TransiveResult{std::span(m_receivedCommand), std::span(m_transmittedCommand)};
+        return true;
+    }
+
     uint16_t getReceivedHandshake()
     {
         k_sem_take(&m_handshakeSemaphore, K_FOREVER);
         return m_receivedHandshake;
+    }
+
+    bool takeHandshake(uint16_t& rx, k_timeout_t timeout)
+    {
+        if (k_sem_take(&m_handshakeSemaphore, timeout) != 0) return false;
+        rx = m_receivedHandshake;
+        return true;
     }
 
     uint16_t getTransmittedHandshake()

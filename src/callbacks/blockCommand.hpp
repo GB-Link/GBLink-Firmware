@@ -11,5 +11,9 @@ uint16_t blockCommandTransive();
 
 TransiveStruct blockCommand();
 
+bool blockCommandTransferComplete();
+uint16_t blockCommandBytesSent();
+void blockCommandConsumeComplete();
+void blockCommandReset();
 
 
