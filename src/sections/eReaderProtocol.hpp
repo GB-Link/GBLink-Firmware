@@ -6,8 +6,10 @@
 
 #include "../link_defines.h"
 
-extern "C" uint8_t link_readPartnerPins(void);
-extern "C" uint8_t link_getDetectedCableType(void);
+extern "C"
+{
+    #include "../layers/linkLayer.h"
+}
 
 namespace erproto
 {

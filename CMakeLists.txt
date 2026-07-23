@@ -31,6 +31,7 @@ target_sources(
     src/main.cpp
     src/hardware.cpp
     src/persist.cpp
+    src/linkWrongPinWatchdog.c
 )
 
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)

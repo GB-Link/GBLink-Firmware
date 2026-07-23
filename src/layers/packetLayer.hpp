@@ -13,6 +13,7 @@ extern "C"
 #endif
 
 #include <span>
+#include <optional>
 #include <zephyr/drivers/gpio.h>
 
 #pragma once
@@ -80,9 +81,14 @@ public:
         if (handler.init != nullptr) handler.init(handler.userData);
     }
     
-    TransiveResult awaitTransiveResults() 
-    { 
-        k_sem_take(&m_commandTransiveSemaphore, K_FOREVER);
+    TransiveResult awaitTransiveResults()
+    {
+        return *awaitTransiveResults(K_FOREVER);
+    }
+
+    std::optional<TransiveResult> awaitTransiveResults(k_timeout_t timeout)
+    {
+        if (k_sem_take(&m_commandTransiveSemaphore, timeout) != 0) return std::nullopt;
         return TransiveResult
         {
             std::span(m_receivedCommand),
@@ -90,24 +96,15 @@ public:
         };
     }
 
-    bool tryAwaitTransiveResults(TransiveResult& result, k_timeout_t timeout)
-    {
-        if (k_sem_take(&m_commandTransiveSemaphore, timeout) != 0) return false;
-        result = TransiveResult{std::span(m_receivedCommand), std::span(m_transmittedCommand)};
-        return true;
-    }
-
     uint16_t getReceivedHandshake()
     {
-        k_sem_take(&m_handshakeSemaphore, K_FOREVER);
-        return m_receivedHandshake;
+        return *getReceivedHandshake(K_FOREVER);
     }
 
-    bool takeHandshake(uint16_t& rx, k_timeout_t timeout)
+    std::optional<uint16_t> getReceivedHandshake(k_timeout_t timeout)
     {
-        if (k_sem_take(&m_handshakeSemaphore, timeout) != 0) return false;
-        rx = m_receivedHandshake;
-        return true;
+        if (k_sem_take(&m_handshakeSemaphore, timeout) != 0) return std::nullopt;
+        return m_receivedHandshake;
     }
 
     uint16_t getTransmittedHandshake()

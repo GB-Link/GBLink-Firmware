@@ -74,7 +74,7 @@ static void ensurePioLink()
     erProto_shutdownPokemonPacketLayer();
 
     if (erproto::isSma4Profile(g_proxy.profile))
-        link_configureMultiSlave();
+        link_configureEreaderSlave();
     else
     {
         link_configurePartnerPresence();
@@ -282,11 +282,10 @@ static void pokemonArmLinkPlayerFull(PacketLayer& layer)
 
 static void pokemonPollHandshakes(erproto::EReaderProxy& proxy, PacketLayer& layer)
 {
-    uint16_t rx = 0;
-    while (layer.takeHandshake(rx, K_NO_WAIT))
+    while (auto rx = layer.getReceivedHandshake(K_NO_WAIT))
     {
-        if (rx == LINK_MASTER_HANDSHAKE)
-            proxy.emitPhase(erproto::Phase::handshaking, rx);
+        if (*rx == LINK_MASTER_HANDSHAKE)
+            proxy.emitPhase(erproto::Phase::handshaking, *rx);
     }
 }
 
@@ -374,9 +373,8 @@ static void pokemonPumpPacketLayer()
 
     pokemonPollHandshakes(proxy, layer);
 
-    PacketLayer::TransiveResult result;
-    while (layer.tryAwaitTransiveResults(result, K_NO_WAIT))
-        pokemonHandleTransiveFrame(proxy, layer, result);
+    while (auto result = layer.awaitTransiveResults(K_NO_WAIT))
+        pokemonHandleTransiveFrame(proxy, layer, *result);
 }
 
 static struct NextTransmit sma4TransmitCallback(void*)
@@ -521,7 +519,7 @@ void EReaderProtocolSection::process()
             if (!g_sdPathFlipped && g_wrongPinIntervals >= kWrongPinIntervals)
             {
                 g_sdPathFlipped = true;
-                link_flipSdPath();
+                link_flipSdPinPath();
                 g_multiPioActive = false;
                 ensurePioLink();
                 g_proxy.emitWire(erproto::WIRE_FLAG_SD_FLIPPED,

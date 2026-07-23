@@ -63,8 +63,8 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gba, 0, 18,
     (0xf000 | PIO_SD_GBA),
     0xc000, 0xbf42);
 
-/* MULTI child: SO stays on GPIO LOW — no PIO_SO in set ops. */
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_multi_gba, 0, 18,
+/* e-reader child: SO stays on GPIO LOW — no PIO_SO in set ops. */
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_ereader_gba, 0, 18,
     (0xe000 | PIO_SD_GBA), 0xe080, 0xe02f, 0x2020,
     0xd701, 0x4e01, 0x0045, 0x8020,
     (0xe000 | PIO_SD_GBA),
@@ -97,7 +97,7 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gbc, 0, 18,
     (0xf000 | PIO_SD_GBC),
     0xc000, 0xbf42);
 
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_multi_gbc, 0, 18,
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_ereader_gbc, 0, 18,
     (0xe000 | PIO_SD_GBC), 0xe080, 0xe02f, 0x2020,
     0xd701, 0x4e01, 0x0045, 0x8020,
     (0xe000 | PIO_SD_GBC),
@@ -115,19 +115,28 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_multi_gbc, 0, 18,
  * a hardwired ground can never read high, so any high sample proves GBC.
  * (A steadily driven-low SO still misreads; the host's cable-flip fallback
  * covers that case.) */
+#define CABLE_DETECT_SETTLE_ITERS   1000    /* ~10us */
+#define CABLE_DETECT_SAMPLE_ITERS   200000  /* ~2ms */
+
+/* link_pins indices: 0=SC, 1=SI, 2=SO, 3=SD_GBA, 4=SD_GBC */
 static bool detect_gbc_cable(void)
 {
-    gpio_set_function(1, GPIO_FUNC_SIO);
-    gpio_set_dir(1, GPIO_IN);
-    gpio_pull_up(1);
-    for (volatile int i = 0; i < 1000; i++);  /* settle ~10us */
-    bool gbc = false;
-    for (volatile int i = 0; i < 200000; i++)  /* sample ~2ms */
+    #pragma push_macro("pio0")
+    #undef pio0
+    const uint32_t si_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
+    #pragma pop_macro("pio0")
+
+    gpio_set_function(si_pin, GPIO_FUNC_SIO);
+    gpio_set_dir(si_pin, GPIO_IN);
+    gpio_pull_up(si_pin);
+    for (volatile int i = 0; i < CABLE_DETECT_SETTLE_ITERS; i++);  /* settle ~10us */
+    bool gbcCableDetected = false;
+    for (volatile int i = 0; i < CABLE_DETECT_SAMPLE_ITERS; i++)  /* sample ~2ms */
     {
-        if (gpio_get(1)) { gbc = true; break; }
+        if (gpio_get(si_pin)) { gbcCableDetected = true; break; }
     }
-    gpio_set_function(1, GPIO_FUNC_PIO0);
-    return gbc;
+    gpio_set_function(si_pin, GPIO_FUNC_PIO0);
+    return gbcCableDetected;
 }
 
 static bool g_gbc_cable = false;
@@ -135,12 +144,12 @@ static bool g_gbc_cable = false;
 #define CABLE_AUTO      0
 #define CABLE_FORCE_GBA 1
 #define CABLE_FORCE_GBC 2
-static uint8_t g_cable_override = CABLE_AUTO;
+static uint8_t g_cableOverride = CABLE_AUTO;
 
-static bool link_useGbcCable(void)
+static bool useGbcCable(void)
 {
-    if (g_cable_override == CABLE_FORCE_GBA) return false;
-    if (g_cable_override == CABLE_FORCE_GBC) return true;
+    if (g_cableOverride == CABLE_FORCE_GBA) return false;
+    if (g_cableOverride == CABLE_FORCE_GBC) return true;
     return g_gbc_cable;
 }
 
@@ -149,33 +158,30 @@ void link_detectCableType(void)
     g_gbc_cable = detect_gbc_cable();
 }
 
-uint8_t link_getDetectedCableType(void)
+enum CableType link_getDetectedCableType(void)
 {
-    return link_useGbcCable() ? 1 : 0;
+    return useGbcCable() ? GBC : GBA;
 }
 
 void link_setCableOverride(uint8_t mode)
 {
     if (mode > CABLE_FORCE_GBC) mode = CABLE_AUTO;
-    g_cable_override = mode;
+    g_cableOverride = mode;
 }
 
-/* Force the SD path opposite to the currently effective one (wrong-pin
+/* Force the SD pin path opposite to the currently effective one (wrong-pin
  * recovery). Cleared back to auto by the next SetCableOverride. */
-void link_flipSdPath(void)
+void link_flipSdPinPath(void)
 {
-    g_cable_override = link_useGbcCable() ? CABLE_FORCE_GBA : CABLE_FORCE_GBC;
+    g_cableOverride = useGbcCable() ? CABLE_FORCE_GBA : CABLE_FORCE_GBC;
 }
 
-/* Which slave flavour is configured. The classic kind is watched by the
- * link-layer wrong-pin watchdog below; the e-reader kinds re-arm through
- * section state (packet layer, partner presence), so that section runs its
- * own equivalent watchdog. */
-enum SlaveKind { SLAVE_KIND_NONE, SLAVE_KIND_CLASSIC, SLAVE_KIND_EREADER };
-static volatile uint8_t g_slave_kind = SLAVE_KIND_NONE;
+/* Which slave flavour is configured. Classic is watched by the external
+ * wrong-pin watchdog; e-reader kinds re-arm through section state. */
+static volatile uint8_t g_slave_kind = NONE;
 
 /* One recovery flip per mode-armed slave session; granted by
- * link_changeMode(SLAVE), consumed by the watchdog. */
+ * link_changeMode(SLAVE), consumed by the wrong-pin watchdog. */
 static volatile uint8_t g_watchdog_flips_left = 0;
 
 static PIO g_pio = NULL;
@@ -203,6 +209,16 @@ static volatile uint32_t g_rx_words = 0;
 uint32_t link_getReceivedWordCount(void)
 {
     return g_rx_words;
+}
+
+enum SlaveMode link_getSlaveMode(void)
+{
+    return (enum SlaveMode)g_slave_kind;
+}
+
+uint8_t link_getWrongPinFlipsLeft(void)
+{
+    return g_watchdog_flips_left;
 }
 
 static void pioIsr_done(const void* arg)
@@ -275,14 +291,14 @@ void link_startTransive() {}
 static void link_configureMaster()
 {
     g_mode = MASTER;
-    g_slave_kind = SLAVE_KIND_NONE;
+    g_slave_kind = NONE;
     g_rx_words = 0;
     pio_sm_set_enabled(g_pio, g_sm, false);
     pio_clear_instruction_memory(g_pio);
     pio_sm_restart(g_pio, g_sm);
     pio_sm_clear_fifos(g_pio, g_sm);
 
-    bool gbc = link_useGbcCable();
+    bool gbc = useGbcCable();
 
 	uint32_t offset = gbc
         ? pio_add_program(g_pio, RPI_PICO_PIO_GET_PROGRAM(pio_master_gbc))
@@ -295,8 +311,10 @@ static void link_configureMaster()
     uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
     uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
+    uint32_t SD_pin = gbc
+        ? DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4)
+        : DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
-    uint32_t SD_pin = gbc ? 4 : 3;
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
     sm_config_set_set_pins(&sm_config, SC_pin, gbc ? 5 : 4);
@@ -324,10 +342,16 @@ static void link_configureMaster()
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-static void link_assertBothSdPartnerGpio(void)
+static void assertBothSdPartnerGpio(void)
 {
-    gpio_init(3); gpio_set_dir(3, GPIO_OUT); gpio_put(3, 1);
-    gpio_init(4); gpio_set_dir(4, GPIO_OUT); gpio_put(4, 1);
+    #pragma push_macro("pio0")
+    #undef pio0
+    const uint32_t sd_gba = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
+    const uint32_t sd_gbc = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4);
+    #pragma pop_macro("pio0")
+
+    gpio_init(sd_gba); gpio_set_dir(sd_gba, GPIO_OUT); gpio_put(sd_gba, 1);
+    gpio_init(sd_gbc); gpio_set_dir(sd_gbc, GPIO_OUT); gpio_put(sd_gbc, 1);
 }
 
 uint8_t link_readPartnerPins(void)
@@ -342,16 +366,21 @@ uint8_t link_readPartnerPins(void)
     return mask;
 }
 
-static void link_releaseInactiveSdPin(void)
+static void releaseInactiveSdPin(void)
 {
-    const bool gbc = link_useGbcCable();
-    const uint32_t inactive = gbc ? 3u : 4u;
+    const bool gbc = useGbcCable();
+    #pragma push_macro("pio0")
+    #undef pio0
+    const uint32_t inactive = gbc
+        ? DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3)
+        : DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4);
+    #pragma pop_macro("pio0")
     gpio_init(inactive);
     gpio_set_dir(inactive, GPIO_IN);
     gpio_disable_pulls(inactive);
 }
 
-static void link_configureSlaveCore(bool multiChild)
+static void beginSlavePioConfig(void)
 {
     g_mode = SLAVE;
     g_rx_words = 0;
@@ -359,14 +388,16 @@ static void link_configureSlaveCore(bool multiChild)
     pio_clear_instruction_memory(g_pio);
     pio_sm_restart(g_pio, g_sm);
     pio_sm_clear_fifos(g_pio, g_sm);
+}
 
-    bool gbc = link_useGbcCable();
+static void configureClassicSlavePio(void)
+{
+    beginSlavePioConfig();
 
-    const void* prog;
-    if (multiChild)
-        prog = gbc ? RPI_PICO_PIO_GET_PROGRAM(pio_slave_multi_gbc) : RPI_PICO_PIO_GET_PROGRAM(pio_slave_multi_gba);
-    else
-        prog = gbc ? RPI_PICO_PIO_GET_PROGRAM(pio_slave_gbc) : RPI_PICO_PIO_GET_PROGRAM(pio_slave_gba);
+    bool gbc = useGbcCable();
+    const void* prog = gbc
+        ? RPI_PICO_PIO_GET_PROGRAM(pio_slave_gbc)
+        : RPI_PICO_PIO_GET_PROGRAM(pio_slave_gba);
 
     uint32_t offset = pio_add_program(g_pio, prog);
     pio_sm_config sm_config = pio_get_default_sm_config();
@@ -376,8 +407,10 @@ static void link_configureSlaveCore(bool multiChild)
     uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
     uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
+    uint32_t SD_pin = gbc
+        ? DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4)
+        : DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
     #pragma pop_macro("pio0")
-    uint32_t SD_pin = gbc ? 4 : 3;
 
     sm_config_set_out_pins(&sm_config, SD_pin, 1);
     sm_config_set_set_pins(&sm_config, SC_pin, gbc ? 5 : 4);
@@ -389,45 +422,94 @@ static void link_configureSlaveCore(bool multiChild)
     if (gbc) gpio_pull_up(SD_pin);
     pio_gpio_init(g_pio, SC_pin);
     pio_gpio_init(g_pio, SI_pin);
-    if (multiChild)
-    {
-        gpio_init(SO_pin);
-        gpio_set_dir(SO_pin, GPIO_OUT);
-        gpio_put(SO_pin, 0);
-    }
-    else
-    {
-        pio_gpio_init(g_pio, SO_pin);
-    }
+    pio_gpio_init(g_pio, SO_pin);
 
     sm_config_set_clkdiv(&sm_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200
     sm_config_set_wrap(&sm_config,
-        offset + (gbc
-            ? (multiChild ? RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_multi_gbc) : RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gbc))
-            : (multiChild ? RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_multi_gba) : RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gba))),
-        offset + (gbc
-            ? (multiChild ? RPI_PICO_PIO_GET_WRAP(pio_slave_multi_gbc) : RPI_PICO_PIO_GET_WRAP(pio_slave_gbc))
-            : (multiChild ? RPI_PICO_PIO_GET_WRAP(pio_slave_multi_gba) : RPI_PICO_PIO_GET_WRAP(pio_slave_gba))));
+        offset + (gbc ? RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gbc) : RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gba)),
+        offset + (gbc ? RPI_PICO_PIO_GET_WRAP(pio_slave_gbc) : RPI_PICO_PIO_GET_WRAP(pio_slave_gba)));
 
     pio_sm_init(g_pio, g_sm, -1, &sm_config);
     pio_sm_set_consecutive_pindirs(g_pio, g_sm, SC_pin, 1, false);
     pio_sm_set_consecutive_pindirs(g_pio, g_sm, SI_pin, 1, false);
-    if (!multiChild)
-        pio_sm_set_consecutive_pindirs(g_pio, g_sm, SO_pin, 1, true);
+    pio_sm_set_consecutive_pindirs(g_pio, g_sm, SO_pin, 1, true);
+
+    pio_sm_set_enabled(g_pio, g_sm, true);
+}
+
+static void configureEreaderSlavePio(void)
+{
+    beginSlavePioConfig();
+
+    bool gbc = useGbcCable();
+    const void* prog = gbc
+        ? RPI_PICO_PIO_GET_PROGRAM(pio_slave_ereader_gbc)
+        : RPI_PICO_PIO_GET_PROGRAM(pio_slave_ereader_gba);
+
+    uint32_t offset = pio_add_program(g_pio, prog);
+    pio_sm_config sm_config = pio_get_default_sm_config();
+
+    #pragma push_macro("pio0")
+    #undef pio0
+    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
+    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
+    uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
+    uint32_t SD_pin = gbc
+        ? DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4)
+        : DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
+    #pragma pop_macro("pio0")
+
+    sm_config_set_out_pins(&sm_config, SD_pin, 1);
+    sm_config_set_set_pins(&sm_config, SC_pin, gbc ? 5 : 4);
+    sm_config_set_in_pins(&sm_config, SD_pin);
+    sm_config_set_out_shift(&sm_config, true, false, 0);
+    sm_config_set_in_shift(&sm_config, false, false, 0);
+
+    pio_gpio_init(g_pio, SD_pin);
+    if (gbc) gpio_pull_up(SD_pin);
+    pio_gpio_init(g_pio, SC_pin);
+    pio_gpio_init(g_pio, SI_pin);
+    gpio_init(SO_pin);
+    gpio_set_dir(SO_pin, GPIO_OUT);
+    gpio_put(SO_pin, 0);
+
+    sm_config_set_clkdiv(&sm_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200
+    sm_config_set_wrap(&sm_config,
+        offset + (gbc ? RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_ereader_gbc) : RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_ereader_gba)),
+        offset + (gbc ? RPI_PICO_PIO_GET_WRAP(pio_slave_ereader_gbc) : RPI_PICO_PIO_GET_WRAP(pio_slave_ereader_gba)));
+
+    pio_sm_init(g_pio, g_sm, -1, &sm_config);
+    pio_sm_set_consecutive_pindirs(g_pio, g_sm, SC_pin, 1, false);
+    pio_sm_set_consecutive_pindirs(g_pio, g_sm, SI_pin, 1, false);
 
     pio_sm_set_enabled(g_pio, g_sm, true);
 }
 
 static void link_configureSlave(void)
 {
-    link_configureSlaveCore(false);
-    g_slave_kind = SLAVE_KIND_CLASSIC;
+    configureClassicSlavePio();
+    g_slave_kind = CLASSIC;
+}
+
+bool link_tryWrongPinRecovery(void)
+{
+    const unsigned int key = irq_lock();
+    bool recovered = false;
+    if (g_slave_kind == CLASSIC && g_rx_words == 0 && g_watchdog_flips_left > 0)
+    {
+        g_watchdog_flips_left--;
+        link_flipSdPinPath();
+        link_configureSlave();
+        recovered = true;
+    }
+    irq_unlock(key);
+    return recovered;
 }
 
 static void link_disablePio(void)
 {
     g_mode = DISABLED;
-    g_slave_kind = SLAVE_KIND_NONE;
+    g_slave_kind = NONE;
     g_rx_words = 0;
     pio_sm_set_enabled(g_pio, g_sm, false);
     pio_clear_instruction_memory(g_pio);
@@ -448,17 +530,17 @@ void link_configurePartnerPresence(void)
     gpio_init(SC_pin); gpio_pull_up(SC_pin); gpio_set_dir(SC_pin, GPIO_IN);
     gpio_init(SI_pin); gpio_pull_up(SI_pin); gpio_set_dir(SI_pin, GPIO_IN);
     gpio_init(SO_pin); gpio_set_dir(SO_pin, GPIO_OUT); gpio_put(SO_pin, 0);
-    link_assertBothSdPartnerGpio();
+    assertBothSdPartnerGpio();
 }
 
 void link_configurePokemonSlave(void)
 {
     link_disablePio();
-    link_configureSlaveCore(false);
-    g_slave_kind = SLAVE_KIND_EREADER;
+    configureClassicSlavePio();
+    g_slave_kind = EREADER;
 }
 
-void link_configureMultiSlave(void)
+void link_configureEreaderSlave(void)
 {
     link_disablePio();
     g_mode = SLAVE;
@@ -473,99 +555,35 @@ void link_configureMultiSlave(void)
     gpio_init(SC_pin); gpio_pull_up(SC_pin); gpio_set_dir(SC_pin, GPIO_IN);
     gpio_init(SI_pin); gpio_pull_up(SI_pin); gpio_set_dir(SI_pin, GPIO_IN);
     gpio_init(SO_pin); gpio_set_dir(SO_pin, GPIO_OUT); gpio_put(SO_pin, 0);
-    link_releaseInactiveSdPin();
+    releaseInactiveSdPin();
 
-    link_configureSlaveCore(true);
-    g_slave_kind = SLAVE_KIND_EREADER;
+    configureEreaderSlavePio();
+    g_slave_kind = EREADER;
 }
 
 /* Undo the SIO overrides the e-reader flows leave behind (SD pins driven high
- * for partner presence, SO forced low as MULTI child) so later modes start
+ * for partner presence, SO forced low as e-reader child) so later modes start
  * from cable-idle pin state; the PIO paths only reclaim the pins they use. */
 void link_releasePartnerPins(void)
 {
     #pragma push_macro("pio0")
     #undef pio0
     uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
+    uint32_t sd_gba = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 3);
+    uint32_t sd_gbc = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 4);
     #pragma pop_macro("pio0")
 
     gpio_init(SO_pin); gpio_set_dir(SO_pin, GPIO_IN); gpio_disable_pulls(SO_pin);
-    gpio_init(3); gpio_set_dir(3, GPIO_IN); gpio_disable_pulls(3);
-    gpio_init(4); gpio_set_dir(4, GPIO_IN); gpio_disable_pulls(4);
+    gpio_init(sd_gba); gpio_set_dir(sd_gba, GPIO_IN); gpio_disable_pulls(sd_gba);
+    gpio_init(sd_gbc); gpio_set_dir(sd_gbc, GPIO_IN); gpio_disable_pulls(sd_gbc);
 }
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
-/* Wrong-pin watchdog for classic slave modes (trade emu, GBA link relay, AW
- * slave). Cable detection is a heuristic and can pick the wrong SD pin (GBA
- * already in link mode at detect time, or cable plugged in afterwards). The
- * partner clocking SC while zero words arrive is proof of the wrong pin — SC
- * is the same pin for both cable types — so after sustained evidence the
- * watchdog flips the SD path and reconfigures, once per armed session.
- * Requiring both SC levels (a real toggle) rejects a stuck line, and any
- * received word disarms the watchdog until the next configure. */
-static void link_watchdogThread(void* a, void* b, void* c)
-{
-    (void)a; (void)b; (void)c;
-    bool scSeenLow = false;
-    bool scSeenHigh = false;
-    int ticks = 0;
-    int clockingIntervals = 0;
-
-    for (;;)
-    {
-        if (g_slave_kind != SLAVE_KIND_CLASSIC || g_watchdog_flips_left == 0)
-        {
-            scSeenLow = scSeenHigh = false;
-            ticks = 0;
-            clockingIntervals = 0;
-            k_sleep(K_MSEC(100));
-            continue;
-        }
-
-        k_sleep(K_MSEC(1));
-        if (link_readPartnerPins() & 0x01) scSeenLow = true;
-        else scSeenHigh = true;
-
-        if (++ticks < 550) continue;
-        ticks = 0;
-
-        const bool scToggled = scSeenLow && scSeenHigh;
-        scSeenLow = scSeenHigh = false;
-
-        if (link_getReceivedWordCount() != 0)
-        {
-            clockingIntervals = 0;
-            continue;
-        }
-        if (scToggled) clockingIntervals++;
-
-        if (clockingIntervals >= 4)
-        {
-            clockingIntervals = 0;
-            /* Re-check under lock: a mode switch may have raced the decision,
-             * and the reconfigure must not interleave with one. */
-            const unsigned int key = irq_lock();
-            if (g_slave_kind == SLAVE_KIND_CLASSIC && g_rx_words == 0
-                && g_watchdog_flips_left > 0)
-            {
-                g_watchdog_flips_left--;
-                link_flipSdPath();
-                link_configureSlave();
-            }
-            irq_unlock(key);
-        }
-    }
-}
-
-K_THREAD_DEFINE(link_watchdog_tid, 768, link_watchdogThread,
-                NULL, NULL, NULL, 12, 0, 0);
 
 void link_changeMode(enum LinkMode mode)
 {
     switch (mode)
     {
         case SLAVE:
+            /* External wrong-pin watchdog consumes this budget. */
             g_watchdog_flips_left = 1;
             link_configureSlave();
             break;
