@@ -33,6 +33,7 @@ Manual update
 | **GB Link** | `0x02` | SPI passthrough for Game Boy |
 | **GB Printer** | `0x03` | Game Boy Printer emulation (bit-bang SPI slave) |
 | **GBA Advance Wars** | `0x04` | Advance Wars 1 + 2 |
+| **GBA e-Reader** | `0x05` | Nintendo e-Reader emulation |
 
 ---
 
@@ -81,6 +82,8 @@ The onboard WS2812 RGB LED (GP16) indicates the current status:
 | **Yellow** | GBA Mode — Game Boy Advance link active |
 | **Blue** | GB/GBC Mode — Game Boy or Game Boy Color link active |
 | **Purple** | Printer Mode — GB Printer emulation active |
+| **White** | Advance Wars Mode — Advance Wars 1 + 2 link active |
+| **Light blue** | e-Reader Mode — Nintendo e-Reader emulation active |
 
 LED color can also be set via USB command (`0x42`).
 
@@ -118,7 +121,7 @@ Commands are sent over the WebUSB command endpoint:
 | `0x30–0x3F` | GB Link | `0x30` SetTimingConfig, `0x31` EnterPrinter, `0x32` ExitPrinter |
 | `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors |
 | `0x44` | SetWebUsbLanding | (`data[1]`: 1 = on, 0 = off) persists whether the adapter advertises the **launcher.gblink.io** WebUSB landing page (the browser "open site" prompt on connect). It's stored in flash and applies on the next reconnect. The current state is reported as a 5th byte in the `0x0F` GetFirmwareInfo response. |
-| `0x45` | GetLedConfig | returns the persisted per-mode LED colours: `[0x45, count, r,g,b …]` (slots: 0 idle, 1 GBA/Celio, 2 GB/GBC, 3 printer, 4 Advance Wars). |
+| `0x45` | GetLedConfig | returns the persisted per-mode LED colours: `[0x45, count, r,g,b …]` (slots: 0 idle, 1 GBA/Celio, 2 GB/GBC, 3 printer, 4 Advance Wars, 5 e-Reader). |
 | `0x46` | SetModeLedColor | (`[0x46, slot, r, g, b]`) persists a mode's colour (applied on next entry to that mode |
 |`0x42` | SetLEDColor | sets the LED live for previewing). |
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |

@@ -9,6 +9,19 @@ enum LinkMode
     DISABLED
 };
 
+enum CableType
+{
+    GBA,
+    GBC
+};
+
+enum SlaveMode
+{
+    NONE,
+    CLASSIC,
+    EREADER
+};
+
 struct NextTransmit
 {
     uint16_t value;
@@ -32,3 +45,19 @@ enum LinkMode link_getMode();
 void link_changeMode(enum LinkMode mode);
 
 void link_detectCableType(void);
+
+enum CableType link_getDetectedCableType(void);
+void link_setCableOverride(uint8_t mode);
+void link_flipSdPinPath(void);
+uint32_t link_getReceivedWordCount(void);
+
+enum SlaveMode link_getSlaveMode(void);
+uint8_t link_getWrongPinFlipsLeft(void);
+bool link_tryWrongPinRecovery(void);
+
+void link_configurePartnerPresence(void);
+uint8_t link_readPartnerPins(void);
+void link_releasePartnerPins(void);
+
+void link_configurePokemonSlave(void);
+void link_configureEreaderSlave(void);

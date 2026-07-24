@@ -13,6 +13,7 @@ extern "C"
 #endif
 
 #include <span>
+#include <optional>
 #include <zephyr/drivers/gpio.h>
 
 #pragma once
@@ -80,9 +81,14 @@ public:
         if (handler.init != nullptr) handler.init(handler.userData);
     }
     
-    TransiveResult awaitTransiveResults() 
-    { 
-        k_sem_take(&m_commandTransiveSemaphore, K_FOREVER);
+    TransiveResult awaitTransiveResults()
+    {
+        return *awaitTransiveResults(K_FOREVER);
+    }
+
+    std::optional<TransiveResult> awaitTransiveResults(k_timeout_t timeout)
+    {
+        if (k_sem_take(&m_commandTransiveSemaphore, timeout) != 0) return std::nullopt;
         return TransiveResult
         {
             std::span(m_receivedCommand),
@@ -92,7 +98,12 @@ public:
 
     uint16_t getReceivedHandshake()
     {
-        k_sem_take(&m_handshakeSemaphore, K_FOREVER);
+        return *getReceivedHandshake(K_FOREVER);
+    }
+
+    std::optional<uint16_t> getReceivedHandshake(k_timeout_t timeout)
+    {
+        if (k_sem_take(&m_handshakeSemaphore, timeout) != 0) return std::nullopt;
         return m_receivedHandshake;
     }
 

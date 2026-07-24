@@ -13,6 +13,7 @@ static uint16_t g_pos;
 static uint16_t g_index = 0;
 static bool g_initSend = false;
 static uint16_t g_blockMaxSize = 0;
+static bool g_transferComplete = false;
 
 static uint16_t g_blockCommandInit[8] = {
     LINKCMD_INIT_BLOCK, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00
@@ -23,7 +24,7 @@ static uint16_t g_blockCommandContent[8] = {LINKCMD_CONT_BLOCK, 0x00, 0x00, 0x00
 
 CommandState blockCommandChunk()
 {
-    if (g_blockMaxSize == 0) return CommandState::done;
+    if (g_blockMaxSize == 0) { g_transferComplete = true; return CommandState::done; }
 
     if (!g_initSend) return CommandState::resume;
 
@@ -51,7 +52,22 @@ void blockCommandSetup(const void* src, uint16_t size, uint16_t blockMaxSize)
     g_initSend = false;
     g_pos = 0;
     g_blockMaxSize = blockMaxSize;
+    g_transferComplete = false;
     g_blockCommandInit[BLOCK_SIZE_INDEX] = blockMaxSize;
+}
+
+bool blockCommandTransferComplete() { return g_transferComplete; }
+uint16_t blockCommandBytesSent() { return g_pos; }
+void blockCommandConsumeComplete() { g_transferComplete = false; }
+void blockCommandReset()
+{
+    g_src = nullptr;
+    g_srcSize = 0;
+    g_pos = 0;
+    g_index = 0;
+    g_initSend = false;
+    g_blockMaxSize = 0;
+    g_transferComplete = false;
 }
 
 uint16_t blockCommandTransive()

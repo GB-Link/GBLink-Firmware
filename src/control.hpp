@@ -6,6 +6,8 @@
 #include "module/emu.hpp"
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
+#include "module/eReader.hpp"
+#include "sections/eReaderProtocolSection.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
@@ -30,7 +32,8 @@ class Control
         gbaLink = 0x01,
         gbLink = 0x02,
         gbPrinter = 0x03,
-        advanceWars = 0x04
+        advanceWars = 0x04,
+        gbaEreader = 0x05,
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -50,7 +53,7 @@ public:
         // giving the semaphore (including when preempting a running mode), so we
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
-        const uint8_t awVariant = m_awVariant;
+        const uint8_t modeVariant = m_modeVariant;
         sendLinkStatus(LinkStatus::DeviceReady);
 
         switch (mode)
@@ -114,10 +117,30 @@ public:
                 Transport::registerDataHandler(awProto_receiveHandler, nullptr);
 
                 AdvanceWarsModule advanceWarsModule(
-                    awVariant == 2 ? awproto::GameVariant::aw2
-                                   : awproto::GameVariant::aw1);
+                    modeVariant == 2 ? awproto::GameVariant::aw2
+                                     : awproto::GameVariant::aw1);
                 m_currentModule = &advanceWarsModule;
                 advanceWarsModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            case Mode::gbaEreader:
+            {
+                applyLedForSlot(LED_SLOT_EREADER);
+                link_detectCableType();
+
+                Transport::registerDataHandler(erProto_receiveHandler, nullptr);
+
+                const erproto::Profile profile =
+                    modeVariant == 2 ? erproto::Profile::pokemonRuby :
+                    modeVariant == 3 ? erproto::Profile::sma4JPN :
+                    modeVariant == 4 ? erproto::Profile::pokemonRubyJPN
+                                   : erproto::Profile::sma4;
+                EReaderModule ereaderModule(profile);
+                m_currentModule = &ereaderModule;
+                ereaderModule.execute();
 
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
@@ -131,7 +154,7 @@ public:
 private:
     struct k_sem m_waitForModeSemaphore;
     Mode m_mode;
-    uint8_t m_awVariant = 0;
+    uint8_t m_modeVariant = 0;
 
     IModule* m_currentModule = nullptr;
 
@@ -151,6 +174,8 @@ private:
         SetModeLedColor = 0x46,
         ResetLedColors = 0x47,
         Reboot = 0x48,
+        SetCableOverride = 0x49,
+        GetCableType = 0x4a,
     };
 
     void receiveCommand(std::span<const uint8_t> data)
@@ -172,8 +197,10 @@ private:
         switch (static_cast<ControlCommand>(data[0]))
         {
             // Optional third byte selects a game variant within the mode
-            // (Advance Wars: 1 = AW1, 2 = AW2; defaults to AW1 for older
-            // clients that send only [command, mode]).
+            // (Advance Wars: 1 = AW1, 2 = AW2; e-reader: 1 = SMA4 US,
+            // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN; defaults
+            // to the first variant for older clients that send only
+            // [command, mode]).
             case ControlCommand::SetMode:
                 if (data.size() < 2) return;
                 return callSetMode(static_cast<Mode>(data[1]),
@@ -226,13 +253,27 @@ private:
                 // Warm-reboot into the app so persisted settings apply now; no return.
                 Hardware::getInstance().reboot();
                 break;
+            case HardwareCommand::SetCableOverride:
+                if (data.size() >= 2) {
+                    link_setCableOverride(data[1]);
+                }
+                break;
+            case HardwareCommand::GetCableType:
+            {
+                // Report-only: the cable is sampled once at mode entry (a GBA
+                // already in link mode drives SO low, which would poison a
+                // re-sample); the override command changes the path instead.
+                uint8_t resp[2] = { 0x4a, link_getDetectedCableType() };
+                Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
+                break;
+            }
             default: break;
         }
     }
 
     void callGetLedConfig()
     {
-        // [0x45, count, r0,g0,b0, ... r4,g4,b4]
+        // [0x45, count, r0,g0,b0, ... r5,g5,b5]
         uint8_t info[2 + LED_SLOT_COUNT * 3];
         info[0] = static_cast<uint8_t>(HardwareCommand::GetLedConfig);
         info[1] = LED_SLOT_COUNT;
@@ -249,7 +290,7 @@ private:
     void callSetMode(Mode mode, uint8_t variant = 0)
     {
         m_mode = mode;
-        m_awVariant = variant;
+        m_modeVariant = variant;
         // If a mode is already running, cancel it so executeMode unblocks and
         // switches to the new mode (otherwise SetMode would queue behind a mode
         // that never exits). Same cancel path the web "cancel" command uses.
