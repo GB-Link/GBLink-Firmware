@@ -136,7 +136,12 @@ public:
                 const erproto::Profile profile =
                     modeVariant == 2 ? erproto::Profile::pokemonRuby :
                     modeVariant == 3 ? erproto::Profile::sma4JPN :
-                    modeVariant == 4 ? erproto::Profile::pokemonRubyJPN
+                    modeVariant == 4 ? erproto::Profile::pokemonRubyJPN :
+                    modeVariant == 5 ? erproto::Profile::sma4EUR :
+                    modeVariant == 6 ? erproto::Profile::sma4EURFra :
+                    modeVariant == 7 ? erproto::Profile::sma4EURGer :
+                    modeVariant == 8 ? erproto::Profile::sma4EUREsp :
+                    modeVariant == 9 ? erproto::Profile::sma4EURIta
                                    : erproto::Profile::sma4;
                 EReaderModule ereaderModule(profile);
                 m_currentModule = &ereaderModule;
@@ -198,9 +203,9 @@ private:
         {
             // Optional third byte selects a game variant within the mode
             // (Advance Wars: 1 = AW1, 2 = AW2; e-reader: 1 = SMA4 US,
-            // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN; defaults
-            // to the first variant for older clients that send only
-            // [command, mode]).
+            // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN,
+            // 5-9 = SMA4 EUR En/Fr/De/Es/It; defaults to the first variant
+            // for older clients that send only [command, mode]).
             case ControlCommand::SetMode:
                 if (data.size() < 2) return;
                 return callSetMode(static_cast<Mode>(data[1]),

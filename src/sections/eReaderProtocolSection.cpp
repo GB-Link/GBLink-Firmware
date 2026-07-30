@@ -453,7 +453,7 @@ EReaderProtocolSection::EReaderProtocolSection(erproto::Profile profile)
 
     if (erproto::isSma4Profile(profile))
     {
-        g_proxy.stagedTx = erproto::sma4::ID;
+        g_proxy.stagedTx = g_proxy.sma4HandshakeId();
         link_setTransmitCallback(&sma4TransmitCallback, nullptr);
         link_setReceiveCallback(&sma4ReceiveCallback, nullptr);
     }
