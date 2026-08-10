@@ -46,7 +46,12 @@ Crowd Supply: https://www.crowdsupply.com/gblink/gblink-usb-v2
 
 Existing open source PCB designs
 
-Pico PCB: https://github.com/agtbaskara/game-boy-pico-link-board
+Pico PCB v1.1: https://github.com/GB-Link/GB-Link-USB-DIY (Recommended, adds optional physical link port and better cable compatibility)
+
+
+Others:
+
+Pico PCB v1: https://github.com/agtbaskara/game-boy-pico-link-board
 
 Pico Zero PCB: https://github.com/weimanc/game-boy-zero-link-board
 
