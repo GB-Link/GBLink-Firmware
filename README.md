@@ -91,12 +91,10 @@ LED color can also be set via USB command (`0x42`).
 
 ## Link Cable Compatibility
 
-The firmware automatically detects which cable type is connected at mode selection time.
-
 | Cable Type | Supported Modes | Notes |
 |:---|:---|:---|
-| **OEM GBA Link Cable** | GBA modes only | SD on GP3. |
-| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through. SD routes to GP4 in GBA mode. Auto-detected. |
+| **OEM GBA Link Cable** | GBA modes only | SD on GP3. Select **GBA cable** (or Auto detect) in the launcher. |
+| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through. SD routes to GP4 in GBA mode. Default selection. |
 
 **GBA link cable connectors are not identical: Cheap 3rd party GBA cables missing the hub typically only have 4 conductors and are missing a ground which results in a poor connection.**
 
@@ -105,7 +103,7 @@ The firmware automatically detects which cable type is connected at mode selecti
 
 The device **must** be connected to the **master connector** for GBA modes.
 
-> **Tip:** Connect the cable to the adapter before selecting a GBA mode in the web app. The firmware detects the cable type at mode selection time.
+> **Tip:** With **Auto detect** selected, connect the cable to the adapter before selecting a GBA mode in the web app — the cable type is sampled at mode selection time.
 
 ---
 
@@ -119,12 +117,15 @@ Commands are sent over the WebUSB command endpoint:
 | `0x10–0x1F` | GBA Link | SetModeMaster, SetModeSlave, StartHandshake, ConnectLink |
 | `0x20–0x2F` | GBA Emu | *(internal section commands)* |
 | `0x30–0x3F` | GB Link | `0x30` SetTimingConfig, `0x31` EnterPrinter, `0x32` ExitPrinter |
-| `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors |
+| `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors, `0x48` Reboot, `0x49` SetCableOverride, `0x4a` GetCableType, `0x4b` SetCableSelection |
 | `0x44` | SetWebUsbLanding | (`data[1]`: 1 = on, 0 = off) persists whether the adapter advertises the **launcher.gblink.io** WebUSB landing page (the browser "open site" prompt on connect). It's stored in flash and applies on the next reconnect. The current state is reported as a 5th byte in the `0x0F` GetFirmwareInfo response. |
 | `0x45` | GetLedConfig | returns the persisted per-mode LED colours: `[0x45, count, r,g,b …]` (slots: 0 idle, 1 GBA/Celio, 2 GB/GBC, 3 printer, 4 Advance Wars, 5 e-Reader). |
 | `0x46` | SetModeLedColor | (`[0x46, slot, r, g, b]`) persists a mode's colour (applied on next entry to that mode |
 |`0x42` | SetLEDColor | sets the LED live for previewing). |
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |
+| `0x49` | SetCableOverride | (`[0x49, 0 auto / 1 GBA / 2 GBC]`) session-only override of the cable/SD-pin path for GBA modes; the persisted selection is re-applied at boot. |
+| `0x4a` | GetCableType | returns `[0x4a, 0 GBA / 1 GBC]` — the cable path currently in effect: the forced selection/override if one is set, else the cable sampled at mode entry. |
+| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) persists the cable selection in flash and applies it immediately. Fresh installs default to GBC (`2`); settings saved by firmware ≤ v2.2.2 load as auto (`0`), and the launcher also persists auto once when updating such an adapter. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
 
 ---
 

@@ -141,9 +141,6 @@ static bool detect_gbc_cable(void)
 
 static bool g_gbc_cable = false;
 
-#define CABLE_AUTO      0
-#define CABLE_FORCE_GBA 1
-#define CABLE_FORCE_GBC 2
 static uint8_t g_cableOverride = CABLE_AUTO;
 
 static bool useGbcCable(void)
@@ -153,6 +150,7 @@ static bool useGbcCable(void)
     return g_gbc_cable;
 }
 
+/* Sample even when forced — clients may return the session to auto later. */
 void link_detectCableType(void)
 {
     g_gbc_cable = detect_gbc_cable();
