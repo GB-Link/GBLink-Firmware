@@ -449,4 +449,6 @@ namespace
     }
 }
 
-SYS_INIT(usb_init, POST_KERNEL, 2);
+// After the flash driver (priority 50): usb_init reads the persisted
+// landing-page flag from the settings partition to build the BOS descriptor.
+SYS_INIT(usb_init, POST_KERNEL, 90);

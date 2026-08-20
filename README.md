@@ -125,7 +125,7 @@ Commands are sent over the WebUSB command endpoint:
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |
 | `0x49` | SetCableOverride | (`[0x49, 0 auto / 1 GBA / 2 GBC]`) session-only override of the cable/SD-pin path for GBA modes; the persisted selection is re-applied at boot. |
 | `0x4a` | GetCableType | returns `[0x4a, 0 GBA / 1 GBC]` — the cable path currently in effect: the forced selection/override if one is set, else the cable sampled at mode entry. |
-| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) persists the cable selection in flash and applies it immediately. Fresh installs default to GBC (`2`); settings saved by firmware ≤ v2.2.2 load as auto (`0`), and the launcher also persists auto once when updating such an adapter. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
+| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) persists the cable selection in flash and applies it to the session (takes effect at the next link (re)configure). Fresh installs default to GBC (`2`); settings saved by firmware ≤ v2.2.2 load as auto (`0`), and the launcher also persists auto once when updating such an adapter. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
 
 ---
 

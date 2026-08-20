@@ -62,8 +62,8 @@ namespace
         if (s.magic != SETTINGS_MAGIC) {
             fillDefaults(s);
         } else if (s.version == 6) {
-            // v6 = v7 minus the cable byte — keep the user's values.
-            s.version = SETTINGS_VERSION;
+            // v6 = v7 minus the cable byte — keep the user's values. Literal 7:
+            s.version = 7;
             s.cable = CABLE_AUTO;
         } else if (s.version != SETTINGS_VERSION) {
             fillDefaults(s);
@@ -107,6 +107,7 @@ void setCableSelection(uint8_t cable)
 {
     if (cable > CABLE_FORCE_GBC) return;
     PersistSettings s = loadSettings();
+    if (s.cable == cable) return; // skip the sector erase on a no-op
     s.cable = cable;
     saveSettings(s);
 }
