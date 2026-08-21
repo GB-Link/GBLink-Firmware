@@ -1,6 +1,11 @@
 #include "persist.hpp"
 #include "hardware.hpp"
 
+extern "C"
+{
+    #include "layers/linkLayer.h" // CABLE_* selection values
+}
+
 #include <cstring>
 #include <zephyr/storage/flash_map.h>
 
@@ -9,7 +14,7 @@ namespace
     #define STORAGE_PARTITION_ID FIXED_PARTITION_ID(storage_partition)
 
     constexpr uint8_t SETTINGS_MAGIC = 0x5A;
-    constexpr uint8_t SETTINGS_VERSION = 6; // bumped for the new e-reader LED slot
+    constexpr uint8_t SETTINGS_VERSION = 7; // bumped for the cable selection
 
     struct PersistSettings
     {
@@ -17,17 +22,18 @@ namespace
         uint8_t version;
         uint8_t landing;                       // 0 = disabled, else enabled
         uint8_t led[LED_SLOT_COUNT][3];        // per-slot logical RGB
+        uint8_t cable;                         // CABLE_* SD-pin selection
     };
 
-    // Real-colour defaults at a uniform 25% brightness (64/255) so every mode's
+    // Real-colour defaults at a uniform 12.5% brightness (32/255) so every mode's
     // brightness slider starts at the same place. WS2812 magnitude = brightness.
     const uint8_t kDefaultColors[LED_SLOT_COUNT][3] = {
-        { 0,   64,  0   }, // idle/connected — green
-        { 64,  64,  0   }, // GBA/Celio — yellow
-        { 0,   0,   64  }, // GB/GBC — blue
-        { 64,  0,   64  }, // printer — purple
-        { 64,  64,  64  }, // Advance Wars — white
-        { 0,   20,  64  }, // e-reader — light blue
+        { 0,   32,  0   }, // idle/connected — green
+        { 32,  32,  0   }, // GBA/Celio — yellow
+        { 0,   0,   32  }, // GB/GBC — blue
+        { 32,  0,   32  }, // printer — purple
+        { 32,  32,  32  }, // Advance Wars — white
+        { 0,   10,  32  }, // e-reader — light blue
     };
 
     void fillDefaults(PersistSettings& s)
@@ -36,10 +42,12 @@ namespace
         s.version = SETTINGS_VERSION;
         s.landing = 1;
         memcpy(s.led, kDefaultColors, sizeof(s.led));
+        s.cable = CABLE_FORCE_GBC;
     }
 
-    // Load the settings struct, falling back to defaults when flash is unwritten
-    // or from an older layout (magic/version mismatch).
+    // Defaults when flash is unwritten; older layouts migrate in place (written
+    // back on the next save). Pre-v7 loads cable = auto-detect so an updated
+    // adapter keeps its pre-selection behavior.
     PersistSettings loadSettings()
     {
         PersistSettings s{};
@@ -51,9 +59,17 @@ namespace
         flash_area_read(fa, 0, &s, sizeof(s));
         flash_area_close(fa);
 
-        if (s.magic != SETTINGS_MAGIC || s.version != SETTINGS_VERSION) {
+        if (s.magic != SETTINGS_MAGIC) {
             fillDefaults(s);
+        } else if (s.version == 6) {
+            // v6 = v7 minus the cable byte — keep the user's values. Literal 7:
+            s.version = 7;
+            s.cable = CABLE_AUTO;
+        } else if (s.version != SETTINGS_VERSION) {
+            fillDefaults(s);
+            s.cable = CABLE_AUTO;
         }
+        if (s.cable > CABLE_FORCE_GBC) s.cable = CABLE_FORCE_GBC;
         return s;
     }
 
@@ -79,6 +95,20 @@ void setLandingPageEnabled(bool enabled)
 {
     PersistSettings s = loadSettings();
     s.landing = enabled ? 1 : 0;
+    saveSettings(s);
+}
+
+uint8_t getCableSelection()
+{
+    return loadSettings().cable;
+}
+
+void setCableSelection(uint8_t cable)
+{
+    if (cable > CABLE_FORCE_GBC) return;
+    PersistSettings s = loadSettings();
+    if (s.cable == cable) return; // skip the sector erase on a no-op
+    s.cable = cable;
     saveSettings(s);
 }
 

@@ -438,6 +438,9 @@ namespace
             reinterpret_cast<struct usb_device_descriptor *>(usb_get_device_descriptor());
         if (deviceDescriptor != nullptr) {
             deviceDescriptor->bcdDevice = sys_cpu_to_le16(fw::bcdDevice);
+            // The stack reports bcdUSB 2.01 with BOS enabled, but Chrome only
+            // reads the WebUSB capability (landing page) from devices >= 2.10.
+            deviceDescriptor->bcdUSB = sys_cpu_to_le16(USB_SRN_2_1);
         }
 
         int ret = usb_enable(NULL);
@@ -446,4 +449,6 @@ namespace
     }
 }
 
-SYS_INIT(usb_init, POST_KERNEL, 2);
+// After the flash driver (priority 50): usb_init reads the persisted
+// landing-page flag from the settings partition to build the BOS descriptor.
+SYS_INIT(usb_init, POST_KERNEL, 90);

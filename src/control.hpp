@@ -44,6 +44,9 @@ public:
         Transport::registerCommandHandler(receiveCommandHandler, this);
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
+
+        // Persisted cable selection = boot default for the session override.
+        link_setCableOverride(getCableSelection());
     }
 
     void executeMode()
@@ -136,7 +139,12 @@ public:
                 const erproto::Profile profile =
                     modeVariant == 2 ? erproto::Profile::pokemonRuby :
                     modeVariant == 3 ? erproto::Profile::sma4JPN :
-                    modeVariant == 4 ? erproto::Profile::pokemonRubyJPN
+                    modeVariant == 4 ? erproto::Profile::pokemonRubyJPN :
+                    modeVariant == 5 ? erproto::Profile::sma4EUR :
+                    modeVariant == 6 ? erproto::Profile::sma4EURFra :
+                    modeVariant == 7 ? erproto::Profile::sma4EURGer :
+                    modeVariant == 8 ? erproto::Profile::sma4EUREsp :
+                    modeVariant == 9 ? erproto::Profile::sma4EURIta
                                    : erproto::Profile::sma4;
                 EReaderModule ereaderModule(profile);
                 m_currentModule = &ereaderModule;
@@ -176,6 +184,7 @@ private:
         Reboot = 0x48,
         SetCableOverride = 0x49,
         GetCableType = 0x4a,
+        SetCableSelection = 0x4b,
     };
 
     void receiveCommand(std::span<const uint8_t> data)
@@ -198,9 +207,9 @@ private:
         {
             // Optional third byte selects a game variant within the mode
             // (Advance Wars: 1 = AW1, 2 = AW2; e-reader: 1 = SMA4 US,
-            // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN; defaults
-            // to the first variant for older clients that send only
-            // [command, mode]).
+            // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN,
+            // 5-9 = SMA4 EUR En/Fr/De/Es/It; defaults to the first variant
+            // for older clients that send only [command, mode]).
             case ControlCommand::SetMode:
                 if (data.size() < 2) return;
                 return callSetMode(static_cast<Mode>(data[1]),
@@ -267,6 +276,13 @@ private:
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
+            case HardwareCommand::SetCableSelection:
+                // [0x4b, CABLE_*] — persist the cable selection and apply it now.
+                if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
+                    setCableSelection(data[1]);
+                    link_setCableOverride(data[1]);
+                }
+                break;
             default: break;
         }
     }
@@ -315,7 +331,9 @@ private:
             fw::versionPatch,
             // Byte 4: WebUSB landing-page enabled (1) / disabled (0). Older web
             // apps simply ignore the extra byte.
-            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0)
+            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0),
+            // Byte 5: persisted cable selection (CABLE_*).
+            getCableSelection()
         };
         Transport::sendData(std::span<const uint8_t>(info, sizeof(info)));
     }

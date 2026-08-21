@@ -47,6 +47,14 @@ void link_changeMode(enum LinkMode mode);
 void link_detectCableType(void);
 
 enum CableType link_getDetectedCableType(void);
+
+/* Cable/SD-pin selection — wire-visible encoding (distinct from CableType). */
+enum CableSelection
+{
+    CABLE_AUTO = 0,
+    CABLE_FORCE_GBA = 1,
+    CABLE_FORCE_GBC = 2
+};
 void link_setCableOverride(uint8_t mode);
 void link_flipSdPinPath(void);
 uint32_t link_getReceivedWordCount(void);

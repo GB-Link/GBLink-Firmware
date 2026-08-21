@@ -48,11 +48,22 @@ enum class Profile : uint8_t
     pokemonRuby    = 2,
     sma4JPN        = 3,
     pokemonRubyJPN = 4,
+    sma4EUR        = 5,
+    sma4EURFra     = 6,
+    sma4EURGer     = 7,
+    sma4EUREsp     = 8,
+    sma4EURIta     = 9,
 };
 
 inline bool isSma4Profile(Profile p)
 {
-    return p == Profile::sma4 || p == Profile::sma4JPN;
+    return p == Profile::sma4
+        || p == Profile::sma4JPN
+        || p == Profile::sma4EUR
+        || p == Profile::sma4EURFra
+        || p == Profile::sma4EURGer
+        || p == Profile::sma4EUREsp
+        || p == Profile::sma4EURIta;
 }
 
 enum class Phase : uint8_t
@@ -80,6 +91,11 @@ enum class ErrorCode : uint8_t
 namespace sma4
 {
 constexpr uint16_t ID           = 0xFBFB;
+constexpr uint16_t ID_EUR_ENG   = 0xEAEA;
+constexpr uint16_t ID_EUR_FRA   = 0xE9E9;
+constexpr uint16_t ID_EUR_GER   = 0xE8E8;
+constexpr uint16_t ID_EUR_ESP   = 0xE7E7;
+constexpr uint16_t ID_EUR_ITA   = 0xE6E6;
 constexpr uint16_t GAME_ID_AX   = 0x5841;
 constexpr uint16_t GAME_ID_4E   = 0x4534;
 constexpr uint16_t GAME_ID_4J   = 0x4A34;
@@ -354,6 +370,19 @@ struct EReaderProxy
         return true;
     }
 
+    uint16_t sma4HandshakeId() const
+    {
+        switch (profile)
+        {
+            case Profile::sma4EUR:    return sma4::ID_EUR_ENG;
+            case Profile::sma4EURFra: return sma4::ID_EUR_FRA;
+            case Profile::sma4EURGer: return sma4::ID_EUR_GER;
+            case Profile::sma4EUREsp: return sma4::ID_EUR_ESP;
+            case Profile::sma4EURIta: return sma4::ID_EUR_ITA;
+            default:                  return sma4::ID;
+        }
+    }
+
     uint16_t sma4GameId4() const
     {
         return (profile == Profile::sma4JPN) ? sma4::GAME_ID_4J : sma4::GAME_ID_4E;
@@ -367,7 +396,7 @@ struct EReaderProxy
         if (isSma4Profile(profile))
         {
             sma4 = Sma4State::handshakeId;
-            stagedTx = sma4::ID;
+            stagedTx = sma4HandshakeId();
             emitPhase(Phase::handshaking);
             return;
         }
@@ -391,7 +420,7 @@ struct EReaderProxy
         if (isSma4Profile(profile))
         {
             sma4 = Sma4State::idle;
-            stagedTx = sma4::ID;
+            stagedTx = sma4HandshakeId();
         }
         emitError(ErrorCode::cancel);
     }
@@ -433,8 +462,8 @@ struct EReaderProxy
         switch (sma4)
         {
             case Sma4State::handshakeId:
-                stagedTx = sma4::ID;
-                if (rx == sma4::ID)
+                stagedTx = sma4HandshakeId();
+                if (rx == sma4HandshakeId())
                 {
                     sma4 = Sma4State::handshakeAx;
                     stagedTx = sma4::GAME_ID_AX;
