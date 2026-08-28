@@ -14,7 +14,7 @@ namespace fw
 {
     inline constexpr uint8_t versionMajor = 2;
     inline constexpr uint8_t versionMinor = 2;
-    inline constexpr uint8_t versionPatch = 3;
+    inline constexpr uint8_t versionPatch = 4;
 
     // Packed BCD nibbles 0x0<major><minor><patch>, e.g. 2.2.1 -> 0x0221.
     // Keep each field <= 9 to stay valid BCD.

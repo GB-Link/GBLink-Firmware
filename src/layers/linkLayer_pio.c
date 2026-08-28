@@ -559,6 +559,27 @@ void link_configureEreaderSlave(void)
     g_slave_kind = EREADER;
 }
 
+void link_configureBattleChipGateSlave(void)
+{
+    link_disablePio();
+    g_mode = SLAVE;
+
+    #pragma push_macro("pio0")
+    #undef pio0
+    uint32_t SC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 0);
+    uint32_t SI_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 1);
+    uint32_t SO_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), piolink), default, 0, link_pins, 2);
+    #pragma pop_macro("pio0")
+
+    gpio_init(SC_pin); gpio_pull_up(SC_pin); gpio_set_dir(SC_pin, GPIO_IN);
+    gpio_init(SI_pin); gpio_pull_up(SI_pin); gpio_set_dir(SI_pin, GPIO_IN);
+    gpio_init(SO_pin); gpio_set_dir(SO_pin, GPIO_OUT); gpio_put(SO_pin, 0);
+    releaseInactiveSdPin();
+
+    configureEreaderSlavePio();
+    g_slave_kind = BATTLE_CHIP_GATE;
+}
+
 /* Undo the SIO overrides the e-reader flows leave behind (SD pins driven high
  * for partner presence, SO forced low as e-reader child) so later modes start
  * from cable-idle pin state; the PIO paths only reclaim the pins they use. */

@@ -7,7 +7,9 @@
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
 #include "module/eReader.hpp"
+#include "module/battleChipGate.hpp"
 #include "sections/eReaderProtocolSection.hpp"
+#include "sections/battleChipGateSection.hpp"
 #include "linkStatus.hpp"
 #include "callbacks/commands.hpp"
 #include "payloads/pokemon.hpp"
@@ -34,6 +36,7 @@ class Control
         gbPrinter = 0x03,
         advanceWars = 0x04,
         gbaEreader = 0x05,
+        battleChipGate = 0x06,
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -153,6 +156,22 @@ public:
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
             }
+
+            case Mode::battleChipGate:
+            {
+                applyLedForSlot(LED_SLOT_BATTLE_CHIP_GATE);
+                link_detectCableType();
+
+                Transport::registerDataHandler(bcgProto_receiveHandler, nullptr);
+
+                BattleChipGateModule battleChipGateModule(
+                    bcgproto::gateTypeFromVariant(modeVariant));
+                m_currentModule = &battleChipGateModule;
+                battleChipGateModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
         }
 
         m_currentModule = nullptr;
@@ -265,6 +284,7 @@ private:
             case HardwareCommand::SetCableOverride:
                 if (data.size() >= 2) {
                     link_setCableOverride(data[1]);
+                    bcgProto_requestRearm();
                 }
                 break;
             case HardwareCommand::GetCableType:
@@ -281,6 +301,7 @@ private:
                 if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
                     setCableSelection(data[1]);
                     link_setCableOverride(data[1]);
+                    bcgProto_requestRearm();
                 }
                 break;
             default: break;
