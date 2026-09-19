@@ -37,6 +37,13 @@ target_sources(
 set_compiler_property(PROPERTY diagnostic -fdiagnostics-color=never)
 
 
+# The wireless adapter's transfer path runs from RAM: the GBA clocks the next
+# word about 40us after the last, and executing ~4KB of protocol code in place
+# shares the RP2040's 16KB XIP cache with the kernel, bridge UART and USB, where
+# a cold pass costs more than that whole budget.
+zephyr_code_relocate(FILES src/layers/linkLayer_rfu.c src/sections/rfuProtocolSection.cpp
+                     LOCATION RAM_TEXT)
+
 add_subdirectory(src/layers)
 add_subdirectory(src/callbacks)
 add_subdirectory(src/payloads)
