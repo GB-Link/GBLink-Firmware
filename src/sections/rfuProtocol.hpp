@@ -865,12 +865,20 @@ public:
                             if (allZero)
                                 break;
                         }
-                        m_host.clients[clid].pkt.push(payload,
-                                                      static_cast<uint8_t>(blen),
-                                                      counters.rxDropQueueFull);
-                        if (m_host.clients[clid].pkt.count > dbgFifoHigh)
-                            dbgFifoHigh = m_host.clients[clid].pkt.count;
-                        shedStaleTail(m_host.clients[clid].pkt);
+                        HostClient& c = m_host.clients[clid];
+                        if (childHasCommand(payload, blen))
+                        {
+                            // An unchanged re-send would get a new tag and be
+                            // acted on twice.
+                            if (c.restamp && blen == c.lastLen && std::memcmp(payload, c.last, blen) == 0)
+                                break;
+                            std::memcpy(c.last, payload, blen);
+                            c.lastLen = static_cast<uint8_t>(blen);
+                        }
+                        c.pkt.push(payload, static_cast<uint8_t>(blen), counters.rxDropQueueFull);
+                        if (c.pkt.count > dbgFifoHigh)
+                            dbgFifoHigh = c.pkt.count;
+                        shedSuperseded(c);
                     }
                 }
                 break;
@@ -959,9 +967,8 @@ private:
     static constexpr uint32_t flowRehintMs = 150;
     static constexpr uint32_t flowHoldMs = 300;
     static constexpr uint32_t flowTrimGapMs = 18;     // gentle ~9% trim
-    // Host-side stale-tail shed: at >= this many seq-carrying child frames
-    // queued for one slot, drop the oldest 8 (one full mod-8 seq wrap).
-    static constexpr uint8_t  hostShedAtSeqFrames = 10;
+    // Host side: child frames queued per slot before superseded reports shed.
+    static constexpr uint8_t  hostShedAt = 3;
     static constexpr uint32_t idleRetxGapMs = 17;     // radio re-broadcast cadence
     static constexpr uint32_t idleRetxStartMs = 60;   // quiet threshold to engage
 
@@ -1027,6 +1034,17 @@ private:
             qlen[slot] = len;
         }
 
+        void removeAt(uint8_t i)
+        {
+            for (uint8_t j = i; j + 1 < count; j++)
+            {
+                const uint8_t to = (head + j) % DEPTH, from = (head + j + 1) % DEPTH;
+                std::memcpy(q[to], q[from], MAXLEN);
+                qlen[to] = qlen[from];
+            }
+            count--;
+        }
+
         void dropFront(uint8_t n)
         {
             if (n > count) n = count;
@@ -1057,6 +1075,12 @@ private:
         // tab pauses ≈ 18 frames) without dropping. A dropped nonzero child
         // frame is a seq gap the parent's game does not recover from.
         PktQueue<16, 32> pkt = {};
+        // After the first shed, delivery stamps seq tags; outTag follows the
+        // child's own tags until then. last/lastLen detect re-sends.
+        bool restamp = false;
+        uint8_t outTag = 0;
+        uint8_t last[16] = {};
+        uint8_t lastLen = 0;
     };
     struct HostState
     {
@@ -1330,66 +1354,36 @@ private:
         m_lastRx = rx;
     }
 
-    // Host-side stale-tail shed. During held-keys streaming the parent's game
-    // freewheels past missing child data (the rtx event advances it with an
-    // empty slot), so a lagging child's catch-up frames land at a parent
-    // already past them, and with both pumps capped at one step per frame that
-    // tail never drains. Those frames shed in units of 8 seq steps, which the
-    // parent's 3-bit +1-mod-8 check cannot see (seq +9 ≡ +1).
-    // Two constraints:
-    //  - Content: only held-keys frames with empty/dpad codes freewheel. Block
-    //    chunks (0x89 etc.) are data the parent's game waits on
-    //    (GetBlockReceivedStatus) and shedding them stalls its block FSM, so
-    //    any non-freewheelable frame in the window vetoes the shed.
-    //  - Steps, not frames: the child's backup queue re-sends duplicates with
-    //    an unchanged seq, so 8 frames != 8 seq steps; dups are dropped
-    //    alongside their step without counting.
-    // Zero-cmd frames don't participate in the sequence (link_rfu_2.c:876-907
-    // gates on a nonzero cmd byte) and shed freely.
-    void shedStaleTail(PktQueue<16, 32>& q)
+    // Child frame: 2-byte LLSF header, 14-byte slot. Slot byte 0 bits 5-7 seq
+    // tag, byte 1 command high byte, byte 2 held keys. Only command frames
+    // carry a seq step (link_rfu_2.c:876-907).
+    static bool childHasCommand(const uint8_t* p, uint32_t len)
     {
-        const auto seqCarrying = [&](uint8_t i) {
-            return q.peekLen(i) >= 2 && q.peek(i)[1] != 0;
-        };
-        const auto freewheelable = [&](uint8_t i) {
-            if (q.peekLen(i) < 3) return false;
-            const uint8_t* p = q.peek(i);
-            if (p[1] != 0xBE) return false;  // RFUCMD_SEND_HELD_KEYS only
-            const uint8_t key = p[2];        // LINK_KEY_CODE_*: empty/dpad
-            return key == 0 || (key >= 0x11 && key <= 0x15);
-        };
+        return len >= 4 && p[3] != 0;
+    }
 
-        // Total distinct seq steps queued: the standing depth.
-        int last = -1;
-        uint8_t total = 0;
-        for (uint8_t i = 0; i < q.count; i++)
-        {
-            if (!seqCarrying(i)) continue;
-            const int s = q.peek(i)[0] >> 5;
-            if (s != last) { total++; last = s; }
-        }
-        if (total < hostShedAtSeqFrames) return;
+    // Held-keys report of no key or a direction; a later report supersedes it.
+    static bool childSuperseded(const uint8_t* p, uint32_t len)
+    {
+        if (len < 5 || p[3] != 0xBE) return false;  // RFUCMD_SEND_HELD_KEYS only
+        const uint8_t key = p[4];
+        return key == 0 || (key >= 0x11 && key <= 0x15);
+    }
 
-        // Find the first frame of step 9 (the drop boundary), vetoing if any
-        // seq-carrying frame inside the 8-step window is not freewheelable.
-        last = -1;
-        uint8_t steps = 0;
-        for (uint8_t i = 0; i < q.count; i++)
+    // The parent reads one child frame per frame, so frames left standing after
+    // a burst are lag. Beyond hostShedAt the oldest superseded report is shed
+    // (never the newest) and delivery starts stamping tags.
+    void shedSuperseded(HostClient& c)
+    {
+        PktQueue<16, 32>& q = c.pkt;
+        while (q.count > hostShedAt)
         {
-            if (!seqCarrying(i)) continue;
-            const int s = q.peek(i)[0] >> 5;
-            if (s != last)
-            {
-                if (steps == 8)
-                {
-                    q.dropFront(i);
-                    dbgSheds = dbgSheds + 1;
-                    return;
-                }
-                steps++;
-                last = s;
-            }
-            if (!freewheelable(i)) return;
+            uint8_t i = 0;
+            while (i + 1 < q.count && !childSuperseded(q.peek(i), q.peekLen(i))) i++;
+            if (i + 1 >= q.count) return;
+            q.removeAt(i);
+            c.restamp = true;
+            dbgSheds = dbgSheds + 1;
         }
     }
 
@@ -1952,6 +1946,14 @@ private:
                         if (dlen)
                         {
                             std::memcpy(&tmp[bufbytes], p, dlen);
+                            // The parent accepts only previous tag + 1; shedding
+                            // leaves gaps in the child's numbering.
+                            if (childHasCommand(&tmp[bufbytes], dlen))
+                            {
+                                if (c.restamp)
+                                    tmp[bufbytes + 2] = static_cast<uint8_t>((tmp[bufbytes + 2] & 0x1F) | (c.outTag << 5));
+                                c.outTag = ((tmp[bufbytes + 2] >> 5) + 1) & 7;
+                            }
                             bufbytes += dlen;
                             m_buf[0] |= dlen << (8 + i * 5);
                         }

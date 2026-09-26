@@ -725,7 +725,7 @@ void RfuProtocolSection::reportDiagnostics(uint32_t nowMs)
                                  ? 255
                                  : g_core.counters.rxDropQueueFull),
         // Flow control: FIFO high-water this interval + hint/hold nibbles +
-        // host stale-tail sheds (8-seq-frame units).
+        // superseded client key reports shed.
         fifoHigh,
         static_cast<uint8_t>((sat4(g_core.dbgFlowHints) << 4) | sat4(g_core.dbgFlowHolds)),
         g_core.dbgSheds,
