@@ -55,6 +55,8 @@ enum class Profile : uint8_t
     sma4EURIta     = 9,
     pokemonEmerald    = 10,
     pokemonEmeraldJPN = 11,
+    pokemonEmeraldFra = 12, // (Émeraude) / Emerald
+    pokemonEmeraldGer = 13, // (Smaragd) / Emerald
 };
 
 inline bool isSma4Profile(Profile p)
@@ -134,6 +136,8 @@ constexpr uint8_t  kVersionRuby     = 0;
 constexpr uint8_t  kVersionEmerald  = 3;
 constexpr uint8_t  kLanguageJapanese = 1;
 constexpr uint8_t  kLanguageEnglish  = 2;
+constexpr uint8_t  kLanguageFrench   = 3;
+constexpr uint8_t  kLanguageGerman   = 5;
 }
 
 inline bool isIdleWord(uint16_t w)
@@ -174,14 +178,24 @@ struct PokemonConfig
 
 inline PokemonConfig pokemonConfigFor(Profile p)
 {
-    const bool japanese =
-        p == Profile::pokemonRubyJPN || p == Profile::pokemonEmeraldJPN;
     const bool emerald =
-        p == Profile::pokemonEmerald || p == Profile::pokemonEmeraldJPN;
+        p == Profile::pokemonEmerald
+        || p == Profile::pokemonEmeraldJPN
+        || p == Profile::pokemonEmeraldGer
+        || p == Profile::pokemonEmeraldFra;
+
+    uint8_t language = poke::kLanguageEnglish;
+    if (p == Profile::pokemonRubyJPN || p == Profile::pokemonEmeraldJPN)
+        language = poke::kLanguageJapanese;
+    else if (p == Profile::pokemonEmeraldGer)
+        language = poke::kLanguageGerman;
+    else if (p == Profile::pokemonEmeraldFra)
+        language = poke::kLanguageFrench;
+
     return {
         poke::kLinkTypeRuby,
         emerald ? poke::kVersionEmerald : poke::kVersionRuby,
-        japanese ? poke::kLanguageJapanese : poke::kLanguageEnglish,
+        language,
     };
 }
 
