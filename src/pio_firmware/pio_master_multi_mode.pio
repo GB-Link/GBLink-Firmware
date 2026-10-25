@@ -26,8 +26,8 @@ transive_loop:
     jmp y-- transmit_data_for_player
     
     receive_data_from_seat:
-        set pins, 0b1000
         set pindirs, 0b0101 ; change SD to input
+        set pins, 0b1000
         set x, 31 ; timeout value (~500us with delay, was ~50us)
         wait_for_rx:
             jmp x-- check_state [7] ; decrement x, delay 8 cycles per iteration

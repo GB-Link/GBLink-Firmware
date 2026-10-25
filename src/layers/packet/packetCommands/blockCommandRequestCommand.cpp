@@ -41,12 +41,12 @@ TransmitBehaviour sendBlockCommandRequestCommand(uint16_t type)
     c->index = 0;
     c->type = type;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = blockCommandRequestTransive,
         .transmitDoneCallback = [](TransmitContext* ctx){ return CommandState::done; }
     };
 
-    return std::move(transive);
+    return transive;
 }

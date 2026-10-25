@@ -28,12 +28,12 @@ TransmitBehaviour blockRequest()
     std::unique_ptr<BlockRequestContext> c = std::make_unique<BlockRequestContext>();
     c->index = 0;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = blockRequestTransive,
         .transmitDoneCallback = [](TransmitContext* ctx){ (void)ctx; return CommandState::done; }
     };
 
-    return std::move(transive);
+    return transive;
 }

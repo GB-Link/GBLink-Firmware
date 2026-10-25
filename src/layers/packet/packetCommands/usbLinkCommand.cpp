@@ -2,24 +2,29 @@
 #include "../../../link_defines.h"
 #include "TransiveStruct.hpp"
 #include "zephyr/kernel.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <span>
 
-static constexpr uint8_t packetSize = 17;
-static constexpr uint8_t dataCountOffset = 1;
+static constexpr uint8_t commandBytesSize = 16;
+static constexpr uint8_t metadataSize = 1;
+static constexpr uint8_t packetSize = metadataSize + commandBytesSize;
 
 // Queues should be synced by zephyr internally, so no need for atomics or mutexes.
 // Besides, due to current structurings, usbLink_receiveHandler and loadTransivePacket
 // run in ISR context, maybe improve later
-K_MSGQ_DEFINE(g_packetQueue0, 16, 200, 1);
-K_MSGQ_DEFINE(g_packetQueue1, 16, 200, 1);
-K_MSGQ_DEFINE(g_packetQueue2, 16, 200, 1);
+K_MSGQ_DEFINE(g_packetQueue0, commandBytesSize, 200, 1);
+K_MSGQ_DEFINE(g_packetQueue1, commandBytesSize, 200, 1);
+K_MSGQ_DEFINE(g_packetQueue2, commandBytesSize, 200, 1);
+
+static constexpr uint8_t unassignedSeat = 0xFF;
 
 struct SeatQueueStatus
 {
+    uint8_t seat = unassignedSeat;  // absolute seat (0-3) whose packets this queue holds
     bool packetAvailable = false;
-    uint16_t currentPacket[8] = {};
+    uint16_t currentPacket[commandBytesSize / sizeof(uint16_t)] = {};
     k_msgq* queue;
 };
 
@@ -47,18 +52,23 @@ std::array<SeatQueueStatus, 3> g_seatPacketQueues = {
 struct UsbLinkContext : TransmitContext
 {
     uint8_t index = 0;
-    uint8_t simulatedPartnereCount = 1;
+    uint8_t simulatedPartnereCount = 0;
+    uint8_t seatNumber = 0;
     std::array<SeatQueueStatus, 3>* seatQueues = &g_seatPacketQueues;
 };
 
 void usbLink_receiveHandler(std::span<const uint8_t> data, void*)
 {
-    for(uint8_t i = 0; i < data[0]; i++ )
+    for (size_t packetOffset = 0; packetOffset + packetSize <= data.size(); packetOffset += packetSize)
     {
-        const uint8_t packetOffset = packetSize * i + dataCountOffset;
-        uint8_t seatIndex = data[packetOffset];
-        auto commandPacket = data.subspan(packetOffset + 1, 16);
-        k_msgq_put(g_seatPacketQueues[seatIndex].queue, commandPacket.data(), K_NO_WAIT);
+        const uint8_t seat = data[packetOffset];
+        auto seatQueue = std::ranges::find(g_seatPacketQueues, seat, &SeatQueueStatus::seat);
+
+        // own seat or invalid seat, no queue to put it in
+        if (seatQueue == g_seatPacketQueues.end()) continue;
+
+        auto commandPacket = data.subspan(packetOffset + metadataSize, commandBytesSize);
+        k_msgq_put(seatQueue->queue, commandPacket.data(), K_NO_WAIT);
     }
 }
 
@@ -72,7 +82,7 @@ static void loadNextPacket(TransmitContext* ctx)
     }
 }
 
-static TxValues usbLinkTransmit(TransmitContext* ctx)
+TxValues usbLinkTransmit(TransmitContext* ctx)
 {   
     auto* usbCtx = static_cast<UsbLinkContext*>(ctx);
     TxValues txValues;
@@ -111,21 +121,27 @@ static TxValues usbLinkTransmit(TransmitContext* ctx)
     return txValues;
 }
 
-TransmitBehaviour usbLinkCommand(uint8_t otherPlayerCount)
+TransmitBehaviour usbLinkCommand(uint8_t ownSeat, uint8_t playerCount)
 {
     std::unique_ptr<UsbLinkContext> p = std::make_unique<UsbLinkContext>();
+    p->seatNumber = ownSeat;
+    p->index = 0;
+    p->simulatedPartnereCount = playerCount - 1;
 
-    for (size_t i = 0; i < sizeof(p->seatQueues->size()); i++)
+    // queues hold the other seats in ascending order, which is the order the pio transmits them in
+    uint8_t seat = 0;
+    for (size_t i = 0; i < p->seatQueues->size(); i++)
     {
+        if (seat == ownSeat) seat++;
+
         SeatQueueStatus* seatQueue = &p->seatQueues->at(i);
+        seatQueue->seat = seat++;
         k_msgq_purge(seatQueue->queue);
-        memset(seatQueue->currentPacket, 0, 16);
+        memset(seatQueue->currentPacket, 0, commandBytesSize);
         seatQueue->packetAvailable = false;
     }
-    p->index = 0;
-    p->simulatedPartnereCount = otherPlayerCount;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(p),
         .transmitCallback = usbLinkTransmit,
@@ -136,5 +152,5 @@ TransmitBehaviour usbLinkCommand(uint8_t otherPlayerCount)
         }
     };
 
-    return std::move(transive);
+    return transive;
 }

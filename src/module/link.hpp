@@ -9,8 +9,7 @@ class LinkModule : public IModule
 private:
     enum class LinkModeCommand : uint8_t
     {
-        SetModeMaster = 0x10,
-        SetModeSlave = 0x11,
+        SetPlayerSettings = 0x10,
         StartHandshake = 0x12,
         ConnectLink = 0x13
     };
@@ -40,7 +39,6 @@ private:
     struct k_sem m_waitForLinkModeCommand;
 
     UsbSection* m_currentSection = nullptr;
-    PacketLayer::Mode m_packetLayerMode = PacketLayer::Mode::slave;
 
     uint8_t m_playerCount;
     uint8_t m_seatNumber;

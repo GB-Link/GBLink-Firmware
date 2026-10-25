@@ -10,7 +10,7 @@
 void LinkModule::execute()
 {
     m_cancel = false;
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     bool keepAlive = true;
 
@@ -35,12 +35,9 @@ void LinkModule::receiveCommand(std::span<const uint8_t> command)
 {
     switch (static_cast<LinkModeCommand>(command[0]))
     {
-        case LinkModeCommand::SetModeMaster:
-            m_packetLayerMode = PacketLayer::Mode::master;
-            k_sem_give(&m_waitForLinkModeCommand);
-            break;
-        case LinkModeCommand::SetModeSlave:
-            m_packetLayerMode = PacketLayer::Mode::slave;
+        case LinkModeCommand::SetPlayerSettings:
+            m_playerCount = command[1];
+            m_seatNumber = command[2];
             k_sem_give(&m_waitForLinkModeCommand);            
             break;
         case LinkModeCommand::StartHandshake: return m_currentSection->startHandshake();

@@ -11,12 +11,12 @@ TxValues emptyCommandTransive(TransmitContext* ctx)
 
 TransmitBehaviour emptyCommand()
 {
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = nullptr,
         .transmitCallback = emptyCommandTransive,
         .transmitDoneCallback = [](TransmitContext* ctx){ (void)ctx; return CommandState::done; }
     };
 
-    return std::move(transive);
+    return transive;
 }

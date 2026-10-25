@@ -40,7 +40,7 @@ TransmitBehaviour moveCommand(int16_t data)
     std::unique_ptr<MoveContext> c = std::make_unique<MoveContext>();
     c->move = data;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = moveCommandTransive,
@@ -56,5 +56,5 @@ TransmitBehaviour moveCommand(int16_t data)
         }
     };
 
-    return std::move(transive);
+    return transive;
 }

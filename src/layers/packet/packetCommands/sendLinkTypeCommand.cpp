@@ -41,12 +41,12 @@ TransmitBehaviour sendLinkTypeCommand(uint16_t type)
     c->index = 0;
     c->type = type;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = sendLinkTypeCommandTransive,
         .transmitDoneCallback = [](TransmitContext* ctx){ (void)ctx; return CommandState::done; }
     };
 
-    return std::move(transive);
+    return transive;
 }

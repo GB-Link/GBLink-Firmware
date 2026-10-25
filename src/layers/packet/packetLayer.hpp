@@ -122,22 +122,23 @@ public:
 
     bool isHandshakeEnabled() { return m_transmitedHandShake[0] == LINK_SLAVE_HANDSHAKE; }
 
-    void setSeatNumber(uint8_t seatNumber)
+    void configurePlayer(uint8_t seatNumber, uint8_t playerCount)
     {   
+        m_playerCount = playerCount;
+        m_seatNumber = seatNumber;
+
         if (seatNumber == 0)
         {
              
-            multiMode_selectMode(SLAVE); 
+            multiMode_selectMode(SLAVE);
         }
         else
         {
             multiMode_selectMode(MASTER);
         }
 
-       m_seatNumber = seatNumber;
+       
     }
-
-    void playerCount(uint8_t playerCount) { m_playerCount = playerCount; }
 
     uint8_t getSeatNumber() { return m_seatNumber; }
 
@@ -283,9 +284,7 @@ private:
     HandShakeState m_handshakeState = HandShakeState::disabled;
 
     struct k_timer m_timeoutTimer;
-    #ifdef CONFIG_STM32F0
-    MasterClock m_masterClock;
-    #endif
+
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
     // Callbacks
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -308,12 +307,5 @@ private:
         self->onTransiveDone(rxBytes, txValues);
     }
 
-    #ifdef CONFIG_STM32F0
-    static void packetTimeout(struct k_timer *timer)
-    {
-        void* userData = k_timer_user_data_get(timer);
-        PacketLayer* self = static_cast<PacketLayer*>(userData);
-        self->reset();
-    }
-    #endif
+
 };

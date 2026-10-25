@@ -23,7 +23,7 @@ protected:
 
     inline void connectAsMaster()
     {
-        m_packetLayer.setSeatNumber(0);
+        m_packetLayer.configurePlayer(0, 2);
 
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {
@@ -38,7 +38,7 @@ protected:
 
     inline void connectAsSlave()
     {
-        m_packetLayer.setSeatNumber(1);
+        m_packetLayer.configurePlayer(1, 2);
 
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {

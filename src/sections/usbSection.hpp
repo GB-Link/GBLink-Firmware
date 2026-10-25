@@ -13,9 +13,8 @@ class UsbSection
 public:
     UsbSection(uint8_t playerSeat, uint8_t playerCount) : m_playerSeat(playerSeat), m_playerCount(playerCount)
     {
-        m_packetLayer.sendCommand(usbLinkCommand(playerCount));
-        m_packetLayer.setSeatNumber(playerSeat);
-        m_packetLayer.playerCount(playerCount);
+        m_packetLayer.sendCommand(usbLinkCommand(playerSeat, playerCount));
+        m_packetLayer.configurePlayer(playerSeat, playerCount);
     }
 
     bool process();
@@ -42,18 +41,23 @@ private:
             packetSize
         );
 
-        std::ranges::copy(recievedPacket, packetsBuffer.begin());
+        const auto bytes = std::as_bytes(recievedPacket);
+        std::memcpy(packetsBuffer.data() + 1, bytes.data(), bytes.size());
+
+        packetsBuffer[0] = m_playerSeat;
         
         // skip directional input of case "no button was pressed" as
         // this will just strain the usb/network connection
         
-        if ((packetsBuffer[0] == 0xCAFE && packetsBuffer[1] == 0x11))
+        if ((recievedPacket[0] == 0xCAFE && recievedPacket[1] == 0x11))
         {
             m_noDirectionCommandStreak++;
             if (m_noDirectionCommandStreak > 1)
             {
-                packetsBuffer[0] = 0x00;
                 packetsBuffer[1] = 0x00;
+                packetsBuffer[2] = 0x00;
+                packetsBuffer[3] = 0x00;
+                packetsBuffer[4] = 0x00;
             }
         }
         else
@@ -75,31 +79,36 @@ private:
         // case for end of session
         if (m_numberOfWaitingPackets == 0) return true;
         
-        // skip empty commands
-        const bool emptyCommands = std::all_of(
-            std::begin(m_packets), 
-            std::end(m_packets),
-            [](uint16_t byte) { return byte == 0x00; }
-        );
-        
-        if (!emptyCommands)
+        // skip empty commands, only the payload counts since the seat byte is always set
+        bool emptyCommands = true;
+        for (size_t i = 0; i < m_numberOfWaitingPackets; i++)
         {
-            Transport::sendData(std::span(reinterpret_cast<const uint8_t*>(m_packets.data()), 64));
+            const auto payload = std::span(m_packets).subspan(i * packetSize + 1, packetSize - 1);
+            if (!std::ranges::all_of(payload, [](uint8_t byte) { return byte == 0x00; }))
+            {
+                emptyCommands = false;
+                break;
+            }
         }
 
-        std::memset(reinterpret_cast<uint8_t*>(m_packets.data()), 0x00, 64);
+        if (!emptyCommands)
+        {
+            Transport::sendData(std::span(m_packets));
+        }
+
+        m_packets.fill(0x00);
         m_numberOfWaitingPackets = 0;
 
         return true;
     }
 
-    static constexpr uint8_t maxBufferedPackets = 4;
-    static constexpr uint8_t packetSize = 8;
+    static constexpr uint8_t maxBufferedPackets = 3;
+    static constexpr uint8_t packetSize = 17;
 
     bool m_cancel = false;
     void establishConncection();
     
-    std::array<uint16_t, 32> m_packets = {};
+    std::array<uint8_t, packetSize * maxBufferedPackets> m_packets = {};
     size_t m_numberOfWaitingPackets = 0;
     size_t m_noDirectionCommandStreak = 0;
 

@@ -35,12 +35,12 @@ TransmitBehaviour readyCloseLinkCommand()
     std::unique_ptr<SendReadyExitStandbyContext> c = std::make_unique<SendReadyExitStandbyContext>();
     c->index = 0;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = readyCloseLinkTransive,
         .transmitDoneCallback = [](TransmitContext* ctx){ return CommandState::done; }
     };
 
-    return std::move(transive);
+    return transive;
 }

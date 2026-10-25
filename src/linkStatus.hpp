@@ -8,7 +8,7 @@ enum class LinkStatus : uint16_t
     GameboyConnected = 0xFF00,
     GameboyDisconnected = 0xFF01,
 
-    AwaitMode = 0xFF02,
+    AwaitPlayerSettings = 0xFF02,
     HandshakeReceived = 0xFF03,
     HandshakeFinished = 0xFF04,
 

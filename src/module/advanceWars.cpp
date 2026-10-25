@@ -7,7 +7,7 @@ void AdvanceWarsModule::execute()
     m_cancel = false;
 
     // Step 1: Emit AwaitMode — server will assign master/slave
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     if (m_cancel) return;
 

@@ -28,7 +28,7 @@ void EReaderModule::execute()
 {
     m_cancel = false;
 
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     if (m_cancel) return;
 
