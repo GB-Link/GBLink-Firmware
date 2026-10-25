@@ -18,32 +18,32 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_gba, 0, 31,
     0xe08d, //  0: set    pindirs, 13                
     0xe00d, //  1: set    pins, 13                   
     0x0082, //  2: jmp    y--, 2                     
-    0xdf00, //  3: irq    nowait 0               [31]
-    0xe00c, //  4: set    pins, 12                   
-    0x80a0, //  5: pull   block                      
-    0xa047, //  6: mov    y, osr                     
-    0x0095, //  7: jmp    y--, 21                    
-    0xe008, //  8: set    pins, 8                    
-    0xe085, //  9: set    pindirs, 5                 
-    0xe03f, // 10: set    x, 31                      
-    0x074c, // 11: jmp    x--, 12                [7] 
-    0x002e, // 12: jmp    !x, 14                     
-    0x00cb, // 13: jmp    pin, 11                    
+    0xc000, //  3: irq    nowait 0                   
+    0xe03e, //  4: set    x, 30                      
+    0x0945, //  5: jmp    x--, 5                 [9] 
+    0xe00c, //  6: set    pins, 12                   
+    0x8080, //  7: pull   noblock                    
+    0xa047, //  8: mov    y, osr                     
+    0x0095, //  9: jmp    y--, 21                    
+    0xe085, // 10: set    pindirs, 5                 
+    0xe008, // 11: set    pins, 8                    
+    0xc002, // 12: irq    nowait 2                   
+    0x2020, // 13: wait   0 pin, 0                   
     0xf62f, // 14: set    x, 15                  [22]
     0x4e01, // 15: in     pins, 1                [14]
     0x004f, // 16: jmp    x--, 15                    
     0x9020, // 17: push   block                  [16]
     0xe08d, // 18: set    pindirs, 13                
     0xfd0c, // 19: set    pins, 12               [29]
-    0x0007, // 20: jmp    7                          
+    0x0009, // 20: jmp    9                          
     0xa025, // 21: mov    x, status                  
     0x005d, // 22: jmp    x--, 29                    
-    0x80a0, // 23: pull   block                      
+    0x8080, // 23: pull   noblock                    
     0xef04, // 24: set    pins, 4                [15]
     0x6e01, // 25: out    pins, 1                [14]
     0x00f9, // 26: jmp    !osre, 25                  
     0xef0c, // 27: set    pins, 12               [15]
-    0x0007, // 28: jmp    7                          
+    0x0009, // 28: jmp    9                          
     0xdf01, // 29: irq    nowait 1               [31]
     0x80a0, // 30: pull   block                      
     0xa047, // 31: mov    y, osr                     

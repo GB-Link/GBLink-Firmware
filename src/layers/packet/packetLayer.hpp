@@ -42,9 +42,10 @@ private:
         connect
     };
 
-    static constexpr uint32_t timingHandshake = 30097;
-    static constexpr uint32_t timingCommandBytes = 1378;
-    static constexpr uint32_t timingBetweenCommands = 12953;
+    // reduced by 280 cycles since the tx irq wait (irq + set + 31 * 10) is 280 cycles longer than the old irq [31]
+    static constexpr uint32_t timingHandshake = 29868;
+    static constexpr uint32_t timingCommandBytes = 1098;
+    static constexpr uint32_t timingBetweenCommands = 12673;
 
 public:
     PacketLayer()
@@ -248,6 +249,7 @@ private:
         {
             m_crc += txValues[i];
         }
+        m_transmitCommandIndex++;
         return txValues;
     }
 

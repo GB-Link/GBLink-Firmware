@@ -2,8 +2,6 @@
 
 #include "control.hpp"
 
-#include "./layers/packet/packetLayer.hpp"
-
 #include "link_defines.h"
 
 int main(void)
@@ -14,6 +12,13 @@ int main(void)
         g_control.executeMode();
     }
     
+    // PacketLayer p;
+    // p.configurePlayer(1, 2);
+    // p.enableHandshake();
+    // while (true)
+    // {
+
+    // }
 
     return 0;
 }

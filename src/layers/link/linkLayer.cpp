@@ -17,6 +17,7 @@ extern "C"
 
 #define PREP_NEXT_TRANSMISSION_FLAG 0
 #define RX_TX_DONE_FLAG 1
+#define START_WATCHDOG 2
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -53,6 +54,10 @@ uint16_t g_lastTxValue = 0x00;
 
 static struct NextTransmit g_nextTransmission = {};
 
+// releases the pio from waiting on a start bit that never comes, e.g. no GBA connected
+static struct k_timer g_rxWatchdog;
+static constexpr k_timeout_t rxWatchdogTimeout = K_MSEC(1);
+
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 #pragma push_macro("pio0")
@@ -74,6 +79,10 @@ void assignGpioToPio();
 
 static uint16_t reverse16Bit(uint16_t x);
 
+void link_disable();
+
+void link_enable();
+
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 // IRQ
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -90,8 +99,27 @@ static void pioIsr_prepareTransmission()
     pio_interrupt_clear(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG);
 }
 
+static void pioIsr_startWatchdog()
+{
+    k_timer_start(&g_rxWatchdog, rxWatchdogTimeout, K_NO_WAIT);
+    pio_interrupt_clear(g_pio.device, START_WATCHDOG);
+}
+
+static void rxWatchdogExpired(struct k_timer* timer)
+{
+    (void)timer;
+
+    const uint32_t currentInstruction = g_pio.device->sm[g_pio.id].instr;
+    const bool isWait = (currentInstruction & 0xE000) == 0x2000;
+    if (!isWait) return;
+
+    const uint32_t pc = pio_sm_get_pc(g_pio.device, g_pio.id);
+    pio_sm_exec(g_pio.device, g_pio.id, pio_encode_jmp(pc + 1));
+}
+
 static void pioIsr_done()
 {
+    k_timer_stop(&g_rxWatchdog);
     g_wordCount++;
     pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.timingUs);
     uint16_t rxData = pio_sm_get(g_pio.device, g_pio.id);
@@ -104,7 +132,7 @@ static void pioIsr_done()
 static void pioIsr(const void* arg)
 {
     (void)arg;
-    
+
     if (pio_interrupt_get(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG))
     {
         pioIsr_prepareTransmission();
@@ -113,6 +141,11 @@ static void pioIsr(const void* arg)
     if (pio_interrupt_get(g_pio.device, RX_TX_DONE_FLAG))
     {
         pioIsr_done();
+    }
+
+    if (pio_interrupt_get(g_pio.device, START_WATCHDOG))
+    {
+        pioIsr_startWatchdog();
     } 
 }
 
@@ -155,6 +188,7 @@ void link_disable()
     cableDetection_enableSlaveMonitoring(false);
 
     g_wordCount = 0;
+    k_timer_stop(&g_rxWatchdog);
     pio_sm_set_enabled(g_pio.device, g_pio.id, false);
     pio_clear_instruction_memory(g_pio.device);
     pio_sm_restart(g_pio.device, g_pio.id);
@@ -283,12 +317,15 @@ static int init()
 
     pio_rpi_pico_allocate_sm(dev, &g_pio.id);
 
+    k_timer_init(&g_rxWatchdog, rxWatchdogExpired, NULL);
+
     IRQ_CONNECT(PIO0_IRQ_0 , 0, pioIsr, NULL, 0);
 
     irq_enable(PIO0_IRQ_0);
 
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt0, true);
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt1, true);
+    pio_set_irq0_source_enabled(g_pio.device, pis_interrupt2, true);
 
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 

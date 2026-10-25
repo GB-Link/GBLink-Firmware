@@ -3,8 +3,9 @@
 .define SD_PIN_OUT 1
 .define SD_PIN_IN 1
 
-.define PREP_NEXT_TRANSMISSION 0
+.define PREP_NEXT_TRANSMISSION_FLAG 0
 .define RX_TX_DONE_FLAG 1
+.define START_WATCHDOG_FLAG 2
 
 ; Between Handshake cycle -> 30097 + cyles from .wraptarget till UART start bit
 
@@ -16,25 +17,26 @@ set pins, 0b1101
 wait_till_next_transmission:
     jmp y-- wait_till_next_transmission
 
-irq PREP_NEXT_TRANSMISSION[31] ; give irq time to fill fifo, this approach will keep timing constant
+irq PREP_NEXT_TRANSMISSION_FLAG
+
+set x, 30
+wait_for_tx_irq:
+    jmp x-- wait_for_tx_irq [9] ; wait for irq to fill fifo with next timing value and tx value
 
 set pins, 0b1100 ; set SC low, martk start of complete transmission
 
-pull
+pull noblock
 mov y osr ; seat number
 transive_loop:
     jmp y-- transmit_data_for_player
     
     receive_data_from_seat:
         set pindirs, 0b0101 ; change SD to input
-        set pins, 0b1000
-        set x, 31 ; timeout value (~500us with delay, was ~50us)
-        wait_for_rx:
-            jmp x-- check_state [7] ; decrement x, delay 8 cycles per iteration
-            check_state:
-            jmp !x receive_begin ; x is zero -> begin receive of dummy values
-            jmp pin wait_for_rx
+        set pins, 0b1000 ; pull SO
 
+        irq START_WATCHDOG_FLAG
+        wait 0 pin 0
+        
         receive_begin:
         set x, 15 [22] ; delay to start sampling between duty cycle
         
@@ -51,12 +53,12 @@ transive_loop:
     transmit_data_for_player:
         mov x, status
         jmp x-- done ; tx fifo empty
-        pull
+        pull noblock
         set pins, 0b0100 [15] ; UART start bit
 
         transmit_data:
             out pins, SD_PIN_OUT [14]
-            jmp !osre transmit_data ; FIXME set shift_pull to 16
+            jmp !osre transmit_data 
 
         set pins, 0b1100 [15] ; UART stop bit
         jmp transive_loop
