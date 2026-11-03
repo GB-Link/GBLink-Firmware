@@ -12,13 +12,13 @@ void PacketLayer::onTransiveDone(uint16_t rxBytes, TxValues txValues)
             m_transmitedHandShake = txValues;
             m_receivedHandshake = rxBytes;
             k_sem_give(&m_handshakeSemaphore);
-            m_timingUs = timingHandshake;
+            m_timingUs = timingHandshake[m_playerCount-2];
 
             if (rxBytes == LINK_MASTER_HANDSHAKE 
                 || txValues[0] == LINK_MASTER_HANDSHAKE)
             {
                 m_state = TransiveState::crc;
-                m_timingUs = timingCommandBytes;
+                m_timingUs = timingCommandBytes[m_playerCount-2];
             }
             break;
 
@@ -31,7 +31,7 @@ void PacketLayer::onTransiveDone(uint16_t rxBytes, TxValues txValues)
             
             if (m_commandIndex == 7)
             {
-                m_timingUs = timingBetweenCommands;
+                m_timingUs = timingBetweenCommands[m_playerCount-2];
             }
 
             if (m_commandIndex != 8) return;
@@ -39,7 +39,7 @@ void PacketLayer::onTransiveDone(uint16_t rxBytes, TxValues txValues)
             m_commandIndex = 0;
             m_transmitCommandIndex = 0;
             m_state = TransiveState::crc;
-            m_timingUs = timingCommandBytes;
+            m_timingUs = timingCommandBytes[m_playerCount-1];
             k_sem_give(&m_commandTransiveSemaphore);
             if (m_waitForDisable >= 1)
             {

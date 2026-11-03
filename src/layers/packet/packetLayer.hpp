@@ -42,10 +42,10 @@ private:
         connect
     };
 
-    // reduced by 280 cycles since the tx irq wait (irq + set + 31 * 10) is 280 cycles longer than the old irq [31]
-    static constexpr uint32_t timingHandshake = 29868;
-    static constexpr uint32_t timingCommandBytes = 1098;
-    static constexpr uint32_t timingBetweenCommands = 12673;
+    //cycle timings, each cycle is 0.5425 µs
+    static constexpr std::array<uint32_t, 3> timingHandshake = {29868, 29551, 29282};
+    static constexpr std::array<uint32_t, 3> timingCommandBytes = {1098, 1166, 1178};
+    static constexpr std::array<uint32_t, 3> timingBetweenCommands = {12673, 9758, 7253};
 
 public:
     PacketLayer()
