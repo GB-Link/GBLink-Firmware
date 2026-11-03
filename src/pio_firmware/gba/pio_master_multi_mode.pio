@@ -11,8 +11,7 @@
 
 .wrap_target
 
-set pindirs, 0b1101 ; pins SD | SO | SI | SC
-set pins, 0b1101 
+set pins, 0b1101 ; pins SD | SO | SI | SC
 
 wait_till_next_transmission:
     jmp y-- wait_till_next_transmission
@@ -34,11 +33,14 @@ transive_loop:
         set pindirs, 0b0101 ; change SD to input
         set pins, 0b1000 ; pull SO
 
-        irq START_WATCHDOG_FLAG
-        wait 0 pin 0
+        ; start poll SD to see when to start sampling
+        poll:
+            mov isr, ~null      ; ISR = all 1s, shift count reset
+            in pins, 2          ; low 2 bits = GP4,GP3
+            mov x, ~isr         ; x == 0  <=>  both pins high
+            jmp !x poll
         
-        receive_begin:
-        set x, 15 [22] ; delay to start sampling between duty cycle
+        set x, 15 [19] ; delay to start sampling between duty cycle
         
         receive_data:
             in pins SD_PIN_IN [14]

@@ -1,0 +1,58 @@
+.program pio_slave_mode
+
+.define SD_PIN_OUT 1
+.define SD_PIN_IN 1
+
+.define PREP_NEXT_TRANSMISSION 0
+.define RX_TX_DONE_FLAG 1
+
+.wrap_target
+
+; pins SD | SO | SI | SC
+set pins, 0b1000 ; drive SO low so SI of GBA is low and GBA switches to master
+set pindirs, 0b0100 ; change SD to input, SO to output
+
+set x, 15
+
+; poll SD when to start sampling
+poll:
+    mov isr, ~null      ; ISR = all 1s, shift count reset
+    in pins, 2          ; low 2 bits = GP4,GP3
+    mov x, ~isr         ; x == 0  <=>  both pins high
+    jmp !x poll
+
+irq PREP_NEXT_TRANSMISSION [23] ; wait one and a half bit before start sampling, irq early so it is avaible later
+
+receive_data:
+    in pins SD_PIN_IN [14]
+    jmp x-- receive_data
+
+push
+pull ; first pull is seat number, no needed for slave since receive is alwyas at 0
+
+set pins, 0b1000
+set pindirs, 0b1100 ; change SD to output, SO stays output
+
+nop [31] ; wait a short time to match original behavour better
+
+transmit_for_player:
+    set x, 15
+    pull
+    set pins, 0b0000 [16] ; UART start bit
+
+    transmit_data:
+        out pins, SD_PIN_OUT [14]
+        jmp x-- transmit_data
+
+    set pins, 0b1000 [16] ; UART stop bit
+    nop [31] ; wait a short time to match original behavour better
+
+    mov x, status
+    jmp !x transmit_for_player ; more data in fifo
+
+irq RX_TX_DONE_FLAG[31]
+
+nop[31] ; pull unused timing that the DONE_IRQ will put into fifo
+pull
+
+.wrap

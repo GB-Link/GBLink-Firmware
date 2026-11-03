@@ -1,4 +1,4 @@
-.program pio_slave_mode
+.program pio_slave_mode_gbc
 
 .define SD_PIN_OUT 1
 .define SD_PIN_IN 1
@@ -8,9 +8,9 @@
 
 .wrap_target
 
-; pins SD | SO | SI | SC
-set pins, 0b1000 ; drive SO low so SI of GBA is low and GBA switches to master
-set pindirs, 0b0100 ; change SD to input, SO to output
+; pins SD | NC | SO | SI | SC
+set pins, 0b10000 ; drive SO low so SI of GBA is low and GBA switches to master
+set pindirs, 0b00100 ; change SD to input, SO to output
 
 set x, 15 
 wait 0 pin 0 
@@ -23,21 +23,21 @@ receive_data:
 push
 pull ; first pull is seat number, no needed for slave since receive is alwyas at 0
 
-set pins, 0b1000
-set pindirs, 0b1100 ; change SD to output, SO stays output
+set pins, 0b10000
+set pindirs, 0b10100 ; change SD to output, SO stays output
 
 nop [31] ; wait a short time to match original behavour better
 
 transmit_for_player:
     set x, 15
     pull
-    set pins, 0b0000 [16] ; UART start bit
+    set pins, 0b00000 [16] ; UART start bit
 
     transmit_data:
         out pins, SD_PIN_OUT [14]
         jmp x-- transmit_data
 
-    set pins, 0b1000 [16] ; UART stop bit
+    set pins, 0b10000 [16] ; UART stop bit
     nop [31] ; wait a short time to match original behavour better
 
     mov x, status

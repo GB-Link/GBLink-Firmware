@@ -81,37 +81,68 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gba, 0, 23,
 
 /* --- GBC cable programs (SD on GP4) --- */
 
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_gbc, 0, 26,
-    (0xe080 | PIO_SC | PIO_SO | PIO_SD_GBC), //  0: set    pindirs, SC|SO|SD=out
-    (0xe000 | PIO_SC | PIO_SO | PIO_SD_GBC), //  1: set    pins, SC|SO|SD=HIGH
-    0x0082, 0xc001, 0xe03e, 0x0245, 0x80a0, 0xa047, 0xe02f, 0x80a0,
-    (0xe000 | PIO_SO | PIO_SD_GBC),          // 10: set    pins, SO|SD=HIGH
-    0xef04, 0x6e01, 0x004c,
-    (0xef00 | PIO_SO | PIO_SD_GBC),          // 14: set    pins, SO|SD=HIGH   [15]
-    (0xe000 | PIO_SD_GBC),                   // 15: set    pins, SD=HIGH
-    0xe085, 0xe03f, 0x1f53, 0x0035, 0x00d2,
-    0xf62f, 0x4e01, 0x0056, 0x9020,
-    (0xfe00 | PIO_SO | PIO_SD_GBC),          // 25: set    pins, SO|SD=HIGH   [30]
-    0xc000);
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_gbc, 0, 31,
+    //     .wrap_target
+    0xe095, //  0: set    pindirs, 21                
+    0xe015, //  1: set    pins, 21                   
+    0x0082, //  2: jmp    y--, 2                     
+    0xc000, //  3: irq    nowait 0                   
+    0xe03e, //  4: set    x, 30                      
+    0x0945, //  5: jmp    x--, 5                 [9] 
+    0xe014, //  6: set    pins, 20                   
+    0x8080, //  7: pull   noblock                    
+    0xa047, //  8: mov    y, osr                     
+    0x0095, //  9: jmp    y--, 21                    
+    0xe085, // 10: set    pindirs, 5                 
+    0xe010, // 11: set    pins, 16                   
+    0xc002, // 12: irq    nowait 2                   
+    0x2020, // 13: wait   0 pin, 0                   
+    0xf62f, // 14: set    x, 15                  [22]
+    0x4e01, // 15: in     pins, 1                [14]
+    0x004f, // 16: jmp    x--, 15                    
+    0x9020, // 17: push   block                  [16]
+    0xe095, // 18: set    pindirs, 21                
+    0xfd14, // 19: set    pins, 20               [29]
+    0x0009, // 20: jmp    9                          
+    0xa025, // 21: mov    x, status                  
+    0x005d, // 22: jmp    x--, 29                    
+    0x8080, // 23: pull   noblock                    
+    0xef04, // 24: set    pins, 4                [15]
+    0x6e01, // 25: out    pins, 1                [14]
+    0x00f9, // 26: jmp    !osre, 25                  
+    0xef14, // 27: set    pins, 20               [15]
+    0x0009, // 28: jmp    9                          
+    0xdf01, // 29: irq    nowait 1               [31]
+    0x80a0, // 30: pull   block                      
+    0xa047, // 31: mov    y, osr                     
+            //     .wrap
+);
 
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gbc, 0, 19,
-    (0xe000 | PIO_SD_GBC), 
-    0xe084, 
-    0xe02f, 
-    0x2020,
-    0xd701, 
-    0x4e01, 
-    0x0045, 
-    0x8020,
-    (0xe000 | PIO_SD_GBC),
-    (0xe080 | PIO_SO | PIO_SD_GBC),
-    0xbf42, 
-    0xe02f, 
-    0x80a0,
-    0x80a0,
-    0xf000, 
-    0x6e01, 
-    0x004e,
-    (0xf000 | PIO_SD_GBC),
-    0xc000, 
-    0xbf42);
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_gbc, 0, 23,
+    //     .wrap_target
+    0xe010, //  0: set    pins, 16                   
+    0xe084, //  1: set    pindirs, 4                 
+    0xe02f, //  2: set    x, 15                      
+    0x2020, //  3: wait   0 pin, 0                   
+    0xd700, //  4: irq    nowait 0               [23]
+    0x4e01, //  5: in     pins, 1                [14]
+    0x0045, //  6: jmp    x--, 5                     
+    0x8020, //  7: push   block                      
+    0x80a0, //  8: pull   block                      
+    0xe010, //  9: set    pins, 16                   
+    0xe094, // 10: set    pindirs, 20                
+    0xbf42, // 11: nop                           [31]
+    0xe02f, // 12: set    x, 15                      
+    0x80a0, // 13: pull   block                      
+    0xf000, // 14: set    pins, 0                [16]
+    0x6e01, // 15: out    pins, 1                [14]
+    0x004f, // 16: jmp    x--, 15                    
+    0xf010, // 17: set    pins, 16               [16]
+    0xbf42, // 18: nop                           [31]
+    0xa025, // 19: mov    x, status                  
+    0x002c, // 20: jmp    !x, 12                     
+    0xdf01, // 21: irq    nowait 1               [31]
+    0xbf42, // 22: nop                           [31]
+    0x80a0, // 23: pull   block                      
+            //     .wrap
+);
