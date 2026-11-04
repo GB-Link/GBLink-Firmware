@@ -1,17 +1,21 @@
 .program pio_master_mode
 
-.define SD_PIN_OUT 1
-.define SD_PIN_IN 1
+; SET pins GP0..GP4: bit 0 SC, bit 1 SI, bit 2 SO, bit 3 SD on GP3 (port pin 4), bit 4 SD on GP4 (port pin 1)
+; OUT pins GP3..GP4, IN base GP3. ISR shifts left, OSR shifts right.
+; TX FIFO per transfer: SD output mask, value with each bit doubled, timing for the gap before the next transfer.
+; The mask is the pin the GBA answered on (0 until it has answered), so SD is never driven on a guess.
+; The timing for the first transfer is queued when the state machine is configured.
 
 .define RX_TX_DONE_FLAG 0
 .define TX_VALUE_FLAG 1
 
-; Between Handshake cycle -> 30097 + cyles from .wraptarget till UART start bit
-
 .wrap_target
 
-set pindirs, 0b1101 ; pins SD | SO | SI | SC
-set pins, 0b1101 
+set pindirs, 0b00101        ; SC and SO output, both SD pins input
+set pins, 0b11101
+
+pull                        ; timing value for this gap
+mov y, osr
 
 wait_till_next_transmission:
     jmp y-- wait_till_next_transmission
@@ -20,42 +24,45 @@ irq TX_VALUE_FLAG
 
 set x, 30
 wait_for_tx_irq:
-    jmp x-- wait_for_tx_irq [2] ; wait for irq to fill fifo with next timing value and tx value
+    jmp x-- wait_for_tx_irq [2] ; time for the TX interrupt to queue mask, value and next gap
 
-pull ; timing value for next transmission
-mov y osr ; store in y for wait_till_next_transmission
+pull                        ; SD output mask
+out pindirs, 2
 
 set x, 15
-pull ; tx value -> out
+pull                        ; tx value -> out
 
-set pins, 0b1100
-set pins, 0b0100 [15] ; UART start bit
+set pins, 0b11100
+set pins, 0b00100 [15]      ; UART start bit
 
 transmit_data:
-    out pins, SD_PIN_OUT [14]
+    out pins, 2 [14]
     jmp x-- transmit_data
 
-set pins, 0b1100 [15] ; UART stop bit
+set pins, 0b11100 [15]      ; UART stop bit
 
-set pins, 0b1000
-set pindirs, 0b0101 ; change SD to input
+set pins, 0b11000
+set pindirs, 0b00101        ; change SD to input
 
-set x, 31 ; timeout value (~500us with delay, was ~50us)
+set x, 31                   ; timeout value, one check of both pins every 34 cycles
+mov isr, ~null [1]
 wait_for_rx:
-    jmp x-- check_state [7] ; decrement x, delay 8 cycles per iteration
+    jmp x-- check_state [29]
 check_state:
-    jmp !x receive_begin ; x is zero -> begin receive of dummy values
-    jmp pin wait_for_rx ; pin is HIGH (idle), keep waiting for LOW (start bit)
+    jmp !x receive_begin    ; timeout: sample anyway, the word reads 0xFFFF
+    in pins, 2
+    mov y, ~isr
+    jmp !y wait_for_rx      ; both pins HIGH (idle), keep waiting for LOW (start bit)
 
 receive_begin:
-    set x, 15 [22] ; delay to start sampling between duty cycle
+    set x, 15 [20]          ; first sample in the middle of bit 0
 receive_data:
-    in pins SD_PIN_IN [14]
+    in pins, 2 [14]
     jmp x-- receive_data
 
-push [16] ; rx value
+push [16]                   ; rx value
 
-set pins, 0b1100 [30]
+set pins, 0b11100 [30]
 
 irq RX_TX_DONE_FLAG
 

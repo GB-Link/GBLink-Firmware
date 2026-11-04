@@ -26,15 +26,6 @@ static bool g_multiPioActive = false;
 // the section thread performs it from process().
 static volatile bool g_armRequested = false;
 
-// Wrong-pin watchdog: cable detection is a heuristic (a GBA parked on a link
-// screen, or a cable plugged in after detection, makes it pick the wrong SD
-// pin). The partner clocking SC while zero words arrive is proof of the wrong
-// pin — SC is the same pin for both cable types — so after sustained evidence
-// the section flips the SD path once per scan and re-arms.
-static constexpr int kWrongPinIntervals = 4;
-static bool g_sdPathFlipped = false;
-static int g_wrongPinIntervals = 0;
-
 // Raw storage instead of a static PacketLayer: its constructor self-registers
 // the link ISR callbacks, which must not happen at boot for a layer that only
 // lives during Pokemon e-reader sessions.
@@ -409,9 +400,6 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
     const unsigned int key = irq_lock();
     if (cmd == erproto::HOST_START_SCAN)
     {
-        // Each scan gets a fresh wrong-pin recovery budget.
-        g_sdPathFlipped = false;
-        g_wrongPinIntervals = 0;
         if (!g_multiPioActive)
             g_armRequested = true;
     }
@@ -441,8 +429,6 @@ EReaderProtocolSection::EReaderProtocolSection(erproto::Profile profile)
     ring_buf_reset(&g_erOutRing);
     g_multiPioActive = false;
     g_armRequested = false;
-    g_sdPathFlipped = false;
-    g_wrongPinIntervals = 0;
 
     new (&g_proxy) erproto::EReaderProxy();
     g_proxy.profile = profile;
@@ -511,20 +497,6 @@ void EReaderProtocolSection::process()
             const bool scToggled = scSeenLow && scSeenHigh;
             scSeenLow = false;
             scSeenHigh = false;
-
-            if (g_proxy.scanArmed && scToggled
-                && link_getReceivedWordCount() == 0)
-                g_wrongPinIntervals++;
-
-            if (!g_sdPathFlipped && g_wrongPinIntervals >= kWrongPinIntervals)
-            {
-                g_sdPathFlipped = true;
-                link_flipSdPinPath();
-                g_multiPioActive = false;
-                ensurePioLink();
-                g_proxy.emitWire(erproto::WIRE_FLAG_SD_FLIPPED,
-                                 link_getDetectedCableType(), 0);
-            }
 
             if (g_proxy.wireLogEnabled)
             {

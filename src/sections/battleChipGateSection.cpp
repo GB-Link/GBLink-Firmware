@@ -12,17 +12,10 @@ extern "C"
 
 static bcgproto::BcgProxy g_proxy;
 static volatile bool g_sessionActive = false;
-static volatile bool g_rearmRequested = false;
 
-static constexpr int kWrongPinIntervals = 1;
-static constexpr int kWrongPinIntervalLoops = 50;
 static constexpr int kStatusIntervalLoops = 50;
 static constexpr int kLoopSleepMs = 10;
 static constexpr uint32_t kSlaveTimingUs = 15370;
-static constexpr uint8_t kPartnerScLowMask = 0x01;
-
-static bool g_sdPathFlipped = false;
-static int g_wrongPinIntervals = 0;
 
 static struct NextTransmit transmitCallback(void*)
 {
@@ -32,12 +25,6 @@ static struct NextTransmit transmitCallback(void*)
 static void receiveCallback(uint16_t rx, void*)
 {
     g_proxy.onRound(rx);
-}
-
-void bcgProto_requestRearm()
-{
-    if (g_sessionActive)
-        g_rearmRequested = true;
 }
 
 void bcgProto_receiveHandler(std::span<const uint8_t> data, void*)
@@ -67,7 +54,7 @@ static void emitStatus()
     pkt[8] = static_cast<uint8_t>(chip);
     pkt[9] = static_cast<uint8_t>(chip >> 8);
     pkt[10] = static_cast<uint8_t>(static_cast<int8_t>(g_proxy.stage));
-    pkt[11] = g_sdPathFlipped ? 1 : 0;
+    // pkt[11] stays 0: clients read it as an SD-path flag, and SD is read on both pins.
     const uint16_t staged = g_proxy.stagedTx;
     pkt[12] = static_cast<uint8_t>(staged);
     pkt[13] = static_cast<uint8_t>(staged >> 8);
@@ -82,71 +69,28 @@ BattleChipGateSection::BattleChipGateSection(bcgproto::GateType initialGateType)
     link_setTransmitCallback(&transmitCallback, nullptr);
     link_setReceiveCallback(&receiveCallback, nullptr);
 
-    g_rearmRequested = false;
-    g_sdPathFlipped = false;
-    g_wrongPinIntervals = 0;
     g_sessionActive = true;
 }
 
 BattleChipGateSection::~BattleChipGateSection()
 {
     g_sessionActive = false;
-    g_rearmRequested = false;
     link_setTransmitCallback(nullptr, nullptr);
     link_setReceiveCallback(nullptr, nullptr);
 }
 
 void BattleChipGateSection::armLink()
 {
-    g_rearmRequested = false;
-    g_sdPathFlipped = false;
-    g_wrongPinIntervals = 0;
     link_configureBattleChipGateSlave();
 }
 
 void BattleChipGateSection::process()
 {
-    int intervalLoops = 0;
     int statusLoops = 0;
-    bool scSeenLow = false;
-    bool scSeenHigh = false;
     uint32_t lastReportedRx = 0;
 
     while (!m_cancel)
     {
-        if (g_rearmRequested)
-        {
-            g_rearmRequested = false;
-            const unsigned int key = irq_lock();
-            g_proxy.enterStandby();
-            irq_unlock(key);
-            link_configureBattleChipGateSlave();
-        }
-
-        if (link_readPartnerPins() & kPartnerScLowMask) scSeenLow = true;
-        else scSeenHigh = true;
-
-        if (++intervalLoops >= kWrongPinIntervalLoops)
-        {
-            intervalLoops = 0;
-            const bool scToggled = scSeenLow && scSeenHigh;
-            scSeenLow = false;
-            scSeenHigh = false;
-
-            if (scToggled && link_getReceivedWordCount() == 0)
-                g_wrongPinIntervals++;
-
-            if (!g_sdPathFlipped && g_wrongPinIntervals >= kWrongPinIntervals)
-            {
-                g_sdPathFlipped = true;
-                link_flipSdPinPath();
-                const unsigned int key = irq_lock();
-                g_proxy.enterStandby();
-                irq_unlock(key);
-                link_configureBattleChipGateSlave();
-            }
-        }
-
         if (++statusLoops >= kStatusIntervalLoops)
         {
             statusLoops = 0;

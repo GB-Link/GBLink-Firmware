@@ -66,7 +66,7 @@ The firmware uses the RP2040 PIO to communicate with the Game Boy. Connect the L
 | **SCK** (Clock) | **GP0** |
 | **SIN** (Data In) | **GP1** |
 | **SOUT** (Data Out) | **GP2** |
-| **SD** (Chip Select) | **GP3** (GBA cable) / **GP4** (GBC cable) |
+| **SD** (Chip Select) | **GP3** (link port pin 4) and **GP4** (link port pin 1), both read |
 | **GND** | **Ground** |
 
 Additional hardware pins:
@@ -103,8 +103,10 @@ LED color can also be set via USB command (`0x42`).
 
 | Cable Type | Supported Modes | Notes |
 |:---|:---|:---|
-| **OEM GBA Link Cable** | GBA modes only | SD on GP3. Select **GBA cable** (or Auto detect) in the launcher. |
-| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through. SD routes to GP4 in GBA mode. Default selection. |
+| **OEM GBA Link Cable** | GBA modes only | SD arrives on GP3. |
+| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through, with pins 1 and 4 crossed, so SD arrives on GP4. |
+
+In GBA modes the adapter listens for SD on GP3 and GP4 at the same time and only drives the pin the Game Boy Advance answers on.
 
 **GBA link cable connectors are not identical: Cheap 3rd party GBA cables missing the hub typically only have 4 conductors and are missing a ground which results in a poor connection.**
 
@@ -112,8 +114,6 @@ LED color can also be set via USB command (`0x42`).
 - **Wide** connector = **Slave**
 
 The device **must** be connected to the **master connector** for GBA modes.
-
-> **Tip:** With **Auto detect** selected, connect the cable to the adapter before selecting a GBA mode in the web app — the cable type is sampled at mode selection time.
 
 ---
 
@@ -133,9 +133,9 @@ Commands are sent over the WebUSB command endpoint:
 | `0x46` | SetModeLedColor | (`[0x46, slot, r, g, b]`) persists a mode's colour (applied on next entry to that mode |
 |`0x42` | SetLEDColor | sets the LED live for previewing). |
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |
-| `0x49` | SetCableOverride | (`[0x49, 0 auto / 1 GBA / 2 GBC]`) session-only override of the cable/SD-pin path for GBA modes; the persisted selection is re-applied at boot. |
-| `0x4a` | GetCableType | returns `[0x4a, 0 GBA / 1 GBC]` — the cable path currently in effect: the forced selection/override if one is set, else the cable sampled at mode entry. |
-| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) persists the cable selection in flash and applies it to the session (takes effect at the next link (re)configure). Fresh installs default to GBC (`2`); settings saved by firmware ≤ v2.2.2 load as auto (`0`), and the launcher also persists auto once when updating such an adapter. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
+| `0x49` | SetCableOverride | (`[0x49, 0 auto / 1 GBA / 2 GBC]`) session cable selection, accepted for older clients. It does not change which pin carries SD. |
+| `0x4a` | GetCableType | returns `[0x4a, 0 GBA / 1 GBC]`: `0` when SD arrived on GP3 in the current link session, `1` when it arrived on GP4. Before any word it reports the stored selection (auto reads as `1`). |
+| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) stores the cable selection in flash for older clients. It does not change which pin carries SD. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
 | `0x4c` | GetRfuIsrStats | returns `[0x4c, 5 × u32 LE]` — wireless adapter transfer-path timing: worst interrupt pass (µs), passes longer than the 30 µs staging budget, tightest gap the GBA left between words (µs), passes counted, and the GPIO the last soft-reset pulse arrived on (`0xFF` if none yet). |
 
 ---

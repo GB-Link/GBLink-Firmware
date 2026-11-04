@@ -32,7 +32,6 @@ constexpr uint8_t WIRE_FLAG_SCAN_ARMED = 0x01;
 constexpr uint8_t WIRE_FLAG_IDLE_RX    = 0x02;
 constexpr uint8_t WIRE_FLAG_HANDSHAKE  = 0x04;
 constexpr uint8_t WIRE_FLAG_SUMMARY    = 0x08;
-constexpr uint8_t WIRE_FLAG_SD_FLIPPED = 0x10;
 constexpr uint8_t WIRE_FLAG_PIO_ARMED  = 0x20;
 constexpr uint8_t WIRE_FLAG_NO_TRAFFIC = 0x40;
 constexpr uint8_t WIRE_FLAG_SESSION    = 0x80;
@@ -302,10 +301,9 @@ struct EReaderProxy
         emitWire(WIRE_FLAG_SESSION, 0, 0);
     }
 
-    // scToggled: SC clock activity observed since the previous beacon. SC is
-    // the same pin for both cable types, so "SC toggling but zero words
-    // received" is proof of listening on the wrong SD pin — the host's
-    // cable-flip fallback keys on it.
+    // scToggled: SC clock activity observed since the previous beacon, so the
+    // host can tell a partner that clocks without any word arriving (no SD wire
+    // in the cable) from an idle one. rx carries the GetCableType value.
     void emitWireNoTraffic(bool scToggled)
     {
         const uint8_t pins =

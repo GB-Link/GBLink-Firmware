@@ -51,7 +51,7 @@ public:
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
 
-        // Persisted cable selection = boot default for the session override.
+        // Persisted cable selection, reported by GetCableType until SD traffic is seen.
         link_setCableOverride(getCableSelection());
     }
 
@@ -70,7 +70,6 @@ public:
             case Mode::gbaTradeEmu:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
 
                 party::partyInit();
                 Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
@@ -86,7 +85,6 @@ public:
             case Mode::gbaLink:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
 
                 Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
 
@@ -121,7 +119,6 @@ public:
             case Mode::advanceWars:
             {
                 applyLedForSlot(LED_SLOT_ADVANCE_WARS);
-                link_detectCableType();
 
                 Transport::registerDataHandler(awProto_receiveHandler, nullptr);
 
@@ -138,7 +135,6 @@ public:
             case Mode::gbaEreader:
             {
                 applyLedForSlot(LED_SLOT_EREADER);
-                link_detectCableType();
 
                 Transport::registerDataHandler(erProto_receiveHandler, nullptr);
 
@@ -167,7 +163,6 @@ public:
             case Mode::battleChipGate:
             {
                 applyLedForSlot(LED_SLOT_BATTLE_CHIP_GATE);
-                link_detectCableType();
 
                 Transport::registerDataHandler(bcgProto_receiveHandler, nullptr);
 
@@ -187,10 +182,6 @@ public:
                 // No slot of its own: the stored palette holds seven entries and
                 // an eighth would change the settings layout.
                 applyLedForSlot(LED_SLOT_GBA);
-
-                // The cable type is detected for the report only: this mode
-                // watches both SD pins whichever cable is attached.
-                link_detectCableType();
 
                 Transport::registerDataHandler(rfuProto_receiveHandler, nullptr);
 
@@ -316,9 +307,10 @@ private:
                 Hardware::getInstance().reboot();
                 break;
             case HardwareCommand::SetCableOverride:
+                // [0x49, CABLE_*] — session cable selection. Accepted for older clients;
+                // SD is read on both pins whatever the selection.
                 if (data.size() >= 2) {
                     link_setCableOverride(data[1]);
-                    bcgProto_requestRearm();
                 }
                 break;
             case HardwareCommand::GetRfuIsrStats:
@@ -337,19 +329,18 @@ private:
             }
             case HardwareCommand::GetCableType:
             {
-                // Report-only: the cable is sampled once at mode entry (a GBA
-                // already in link mode drives SO low, which would poison a
-                // re-sample); the override command changes the path instead.
+                // Report-only: the pin SD arrived on in this session, or the
+                // cable selection before any word has been received.
                 uint8_t resp[2] = { 0x4a, link_getDetectedCableType() };
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
             case HardwareCommand::SetCableSelection:
-                // [0x4b, CABLE_*] — persist the cable selection and apply it now.
+                // [0x4b, CABLE_*] — persist the cable selection. Kept for older
+                // clients; the SD pin does not depend on it.
                 if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
                     setCableSelection(data[1]);
                     link_setCableOverride(data[1]);
-                    bcgProto_requestRearm();
                 }
                 break;
             default: break;

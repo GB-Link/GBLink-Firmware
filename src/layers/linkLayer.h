@@ -15,14 +15,6 @@ enum CableType
     GBC
 };
 
-enum SlaveMode
-{
-    NONE,
-    CLASSIC,
-    EREADER,
-    BATTLE_CHIP_GATE
-};
-
 struct NextTransmit
 {
     uint16_t value;
@@ -45,11 +37,12 @@ enum LinkMode link_getMode();
 
 void link_changeMode(enum LinkMode mode);
 
-void link_detectCableType(void);
-
+/* GBA when SD last arrived on GP3 (port pin 4), GBC when on GP4 (port pin 1). Before any word in the
+ * current session it reports the stored cable selection. */
 enum CableType link_getDetectedCableType(void);
 
-/* Cable/SD-pin selection — wire-visible encoding (distinct from CableType). */
+/* Cable selection as sent by SetCableOverride / SetCableSelection (wire encoding, distinct from CableType).
+ * Stored and reported only: SD is read on both pins whatever the selection. */
 enum CableSelection
 {
     CABLE_AUTO = 0,
@@ -57,12 +50,7 @@ enum CableSelection
     CABLE_FORCE_GBC = 2
 };
 void link_setCableOverride(uint8_t mode);
-void link_flipSdPinPath(void);
 uint32_t link_getReceivedWordCount(void);
-
-enum SlaveMode link_getSlaveMode(void);
-uint8_t link_getWrongPinFlipsLeft(void);
-bool link_tryWrongPinRecovery(void);
 
 void link_configurePartnerPresence(void);
 uint8_t link_readPartnerPins(void);
