@@ -19,7 +19,8 @@ enum SlaveMode
 {
     NONE,
     CLASSIC,
-    EREADER
+    EREADER,
+    BATTLE_CHIP_GATE
 };
 
 struct NextTransmit
@@ -69,3 +70,4 @@ void link_releasePartnerPins(void);
 
 void link_configurePokemonSlave(void);
 void link_configureEreaderSlave(void);
+void link_configureBattleChipGateSlave(void);

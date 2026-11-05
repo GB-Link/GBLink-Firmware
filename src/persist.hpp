@@ -13,8 +13,9 @@ enum LedSlot : uint8_t {
     LED_SLOT_GBC = 2,         // GB/GBC link (blue)
     LED_SLOT_PRINTER = 3,     // GB printer (purple)
     LED_SLOT_ADVANCE_WARS = 4,// Advance Wars (white)
-    LED_SLOT_EREADER = 5,
-    LED_SLOT_COUNT = 6,
+    LED_SLOT_EREADER = 5,  // e-Reader (light blue)
+    LED_SLOT_BATTLE_CHIP_GATE = 6, // Battle Chip Gate (deep blue)
+    LED_SLOT_COUNT = 7,
 };
 
 // WebUSB landing-page advertising. Default (unwritten flash) is enabled.

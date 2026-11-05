@@ -14,7 +14,7 @@ namespace
     #define STORAGE_PARTITION_ID FIXED_PARTITION_ID(storage_partition)
 
     constexpr uint8_t SETTINGS_MAGIC = 0x5A;
-    constexpr uint8_t SETTINGS_VERSION = 7; // bumped for the cable selection
+    constexpr uint8_t SETTINGS_VERSION = 8; // bumped for Battle Chip Gate deep-blue default
 
     struct PersistSettings
     {
@@ -34,6 +34,7 @@ namespace
         { 32,  0,   32  }, // printer — purple
         { 32,  32,  32  }, // Advance Wars — white
         { 0,   10,  32  }, // e-reader — light blue
+        { 2,   4,   32  }, // Battle Chip Gate — deep blue
     };
 
     void fillDefaults(PersistSettings& s)
@@ -62,9 +63,16 @@ namespace
         if (s.magic != SETTINGS_MAGIC) {
             fillDefaults(s);
         } else if (s.version == 6) {
-            // v6 = v7 minus the cable byte — keep the user's values. Literal 7:
-            s.version = 7;
+            s.version = SETTINGS_VERSION;
             s.cable = CABLE_AUTO;
+            memcpy(s.led[LED_SLOT_BATTLE_CHIP_GATE],
+                   kDefaultColors[LED_SLOT_BATTLE_CHIP_GATE], 3);
+        } else if (s.version == 7) {
+            const uint8_t cable = s.led[LED_SLOT_BATTLE_CHIP_GATE][0];
+            memcpy(s.led[LED_SLOT_BATTLE_CHIP_GATE],
+                   kDefaultColors[LED_SLOT_BATTLE_CHIP_GATE], 3);
+            s.cable = (cable <= CABLE_FORCE_GBC) ? cable : CABLE_FORCE_GBC;
+            s.version = SETTINGS_VERSION;
         } else if (s.version != SETTINGS_VERSION) {
             fillDefaults(s);
             s.cable = CABLE_AUTO;
