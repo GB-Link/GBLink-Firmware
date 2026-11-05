@@ -57,8 +57,13 @@ static void ensurePioLink()
     // the link, so running it after would kill the mode configured just below.
     erProto_shutdownPokemonPacketLayer();
 
+    if (!erproto::isSma4Profile(g_proxy.profile))
+        erProto_initPokemonPacketLayer();
+    
     if (erproto::isSma4Profile(g_proxy.profile))
+    {
         ereader_configureEreaderSlave();
+    }
     else
     {
         ereader_configurePartnerPresence();
@@ -66,9 +71,6 @@ static void ensurePioLink()
         multiMode_selectMode(SLAVE);
     }
     g_multiPioActive = true;
-
-    if (!erproto::isSma4Profile(g_proxy.profile))
-        erProto_initPokemonPacketLayer();
 
     g_proxy.emitWire(erproto::WIRE_FLAG_PIO_ARMED, 0, erproto::poke::kSlaveHandshake);
 }

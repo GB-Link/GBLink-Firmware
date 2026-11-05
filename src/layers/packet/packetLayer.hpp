@@ -73,8 +73,12 @@ public:
 
     void sendCommand(TransmitBehaviour handler)
     {
-        m_handler = std::move(handler);
+        // Swap under irq_lock so the ISR never sees a half-moved handler; the previous
+        // command ends up in `handler` and is destroyed on return, in thread context.
+        const unsigned int key = irq_lock();
+        std::swap(m_handler, handler);
         m_idle = false;
+        irq_unlock(key);
     }
     
     TransiveResult awaitTransiveResults()
@@ -246,7 +250,16 @@ private:
 
     TxValues transmitCommand()
     {
-        TxValues txValues = m_handler.transmit();
+        TxValues txValues;
+        if (m_idle)
+        {
+            // Finished command is still parked in m_handler; send idle zeros instead.
+            for (uint8_t i = 0; i < m_playerCount - 1; i++) txValues.push(0x00);
+        }
+        else
+        {
+            txValues = m_handler.transmit();
+        }
         m_transmittedCommand[m_transmitCommandIndex] = txValues;
         for (uint8_t i = 0; i < m_playerCount - 1; i++)
         {
