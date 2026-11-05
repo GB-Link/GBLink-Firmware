@@ -1,5 +1,3 @@
-#include "layers/usbLayer.hpp"
-#include "layers/serialLayer.hpp"
 #include "layers/transport.hpp"
 #include "layers/packet/packetLayer.hpp"
 #include "module/link.hpp"
@@ -7,7 +5,9 @@
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
 #include "module/eReader.hpp"
+#include "module/battleChipGate.hpp"
 #include "sections/eReaderProtocolSection.hpp"
+#include "sections/battleChipGateSection.hpp"
 #include "linkStatus.hpp"
 #include "layers/packet/packetCommands/commands.hpp"
 #include "payloads/pokemon.hpp"
@@ -34,6 +34,7 @@ class Control
         gbPrinter = 0x03,
         advanceWars = 0x04,
         gbaEreader = 0x05,
+        battleChipGate = 0x06,
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -45,8 +46,14 @@ public:
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
 
-        // Persisted cable selection = boot default for the session override.
-        cableDetection_setCableOverride(getCableSelection());
+        // Persisted cable selection decides the SD pin for all GBA modes.
+        applyCableSelection(getCableSelection());
+    }
+
+    // No auto-detection: CABLE_AUTO (old settings / web apps) falls back to GBC.
+    static void applyCableSelection(uint8_t selection)
+    {
+        link_selectCableType(selection == CABLE_FORCE_GBA ? GBA : GBC);
     }
 
     void executeMode()
@@ -64,7 +71,6 @@ public:
             case Mode::gbaTradeEmu:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                cableDetection_detectCableType();
 
                 party::partyInit();
                 Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
@@ -80,7 +86,6 @@ public:
             case Mode::gbaLink:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
 
@@ -115,7 +120,6 @@ public:
             case Mode::advanceWars:
             {
                 applyLedForSlot(LED_SLOT_ADVANCE_WARS);
-                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(awProto_receiveHandler, nullptr);
 
@@ -132,7 +136,6 @@ public:
             case Mode::gbaEreader:
             {
                 applyLedForSlot(LED_SLOT_EREADER);
-                cableDetection_detectCableType();
 
                 Transport::registerDataHandler(erProto_receiveHandler, nullptr);
 
@@ -149,6 +152,21 @@ public:
                 EReaderModule ereaderModule(profile);
                 m_currentModule = &ereaderModule;
                 ereaderModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            case Mode::battleChipGate:
+            {
+                applyLedForSlot(LED_SLOT_BATTLE_CHIP_GATE);
+
+                Transport::registerDataHandler(bcgProto_receiveHandler, nullptr);
+
+                BattleChipGateModule battleChipGateModule(
+                    bcgproto::gateTypeFromVariant(modeVariant));
+                m_currentModule = &battleChipGateModule;
+                battleChipGateModule.execute();
 
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
@@ -263,16 +281,14 @@ private:
                 Hardware::getInstance().reboot();
                 break;
             case HardwareCommand::SetCableOverride:
-                if (data.size() >= 2) {
-                    cableDetection_setCableOverride(data[1]);
-                }
+                // Legacy (session override for auto-detection, which is gone).
+                // Accepted and ignored so older web apps keep working; the
+                // cable is set via SetCableSelection.
                 break;
             case HardwareCommand::GetCableType:
             {
-                // Report-only: the cable is sampled once at mode entry (a GBA
-                // already in link mode drives SO low, which would poison a
-                // re-sample); the override command changes the path instead.
-                uint8_t resp[2] = { 0x4a, static_cast<uint8_t>(cableDetection_getDetectedCableType()) };
+                // Legacy: reports the selected cable (no detection anymore).
+                uint8_t resp[2] = { 0x4a, static_cast<uint8_t>(link_getSelectedCableType()) };
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
@@ -280,7 +296,8 @@ private:
                 // [0x4b, CABLE_*] — persist the cable selection and apply it now.
                 if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
                     setCableSelection(data[1]);
-                    cableDetection_setCableOverride(data[1]);
+                    applyCableSelection(data[1]);
+                    bcgProto_requestRearm();
                 }
                 break;
             default: break;

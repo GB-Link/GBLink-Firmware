@@ -10,10 +10,9 @@ extern "C"
     #include "linkPinctrl.h"
 }
 
-#include "./linkLayer.hpp"
+#include "./gbaLinkLayer.hpp"
 
 
-#include "./cableDetection/cableDetection.hpp"
 
 #define PREP_NEXT_TRANSMISSION_FLAG 0
 #define RX_TX_DONE_FLAG 1
@@ -47,6 +46,8 @@ static struct LinkPio g_pio = { .device = NULL, .id = 0};
 static pio_sm_config g_config = {};
 
 static enum CableType g_configuredCable;
+
+static enum CableType g_selectedCable = GBC;
 
 static uint32_t g_wordCount = 0;
 
@@ -183,10 +184,6 @@ void link_startTransive() {}
 
 void link_disable()
 {
-    //FIXME breaches layers but good enoght for now, 
-    // any mode change will disable it and mode that need it can enable it again
-    cableDetection_enableSlaveMonitoring(false);
-
     g_wordCount = 0;
     k_timer_stop(&g_rxWatchdog);
     pio_sm_set_enabled(g_pio.device, g_pio.id, false);
@@ -252,6 +249,12 @@ void link_configureCableType(enum CableType type)
         case GBC: configureGBC(); break;
     }
 }
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+void link_selectCableType(enum CableType type) { g_selectedCable = type; }
+
+enum CableType link_getSelectedCableType() { return g_selectedCable; }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 

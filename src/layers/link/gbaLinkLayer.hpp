@@ -2,10 +2,18 @@
 #include <zephyr/kernel.h>
 #include "hardware/pio.h"
 
-#include "./cableDetection/cableDetection.hpp"
 #include "../../common.hpp"
 
 #pragma once
+
+/**
+ * @brief Which SD pin the cable uses: GBA cable = GP3, GBC cable = GP4.
+ */
+enum CableType
+{
+    GBA,
+    GBC
+};
 
 /**
  * @brief Data for the next link transfer, returned by the TransmitHandler.
@@ -56,6 +64,11 @@ uint32_t link_getPin(enum LinkPin pin);
 void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t wrapTarget);
 
 void link_configureCableType(enum CableType type);
+
+/** Cable the modes should configure for; set from the persisted selection. */
+void link_selectCableType(enum CableType type);
+
+enum CableType link_getSelectedCableType();
 
 uint32_t link_receivedWordCount();
 

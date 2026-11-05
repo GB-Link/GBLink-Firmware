@@ -4,7 +4,7 @@
 #include "../persist.hpp"
 #include "../layers/usbLayer.hpp"
 #include "../layers/transport.hpp"
-#include "../layers/link/linkLayer.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 extern "C"
 {

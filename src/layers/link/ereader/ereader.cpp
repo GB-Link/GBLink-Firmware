@@ -1,7 +1,6 @@
 #include "ereader.hpp"
 #include "ereaderPio.hpp"
-#include "../linkLayer.hpp"
-#include "../cableDetection/cableDetection.hpp"
+#include "../gbaLinkLayer.hpp"
 
 #include <zephyr/kernel.h>
 
@@ -69,7 +68,7 @@ static void configureEreaderSlavePio(void)
 {
     link_disable();
 
-    enum CableType cableType = cableDetection_getDetectedCableType();
+    enum CableType cableType = link_getSelectedCableType();
     link_configureCableType(cableType);
 
     switch (cableType)
@@ -111,7 +110,7 @@ static void assertBothSdPartnerGpio(void)
 
 static void releaseInactiveSdPin(void)
 {
-    const bool gbc = cableDetection_getDetectedCableType();
+    const bool gbc = link_getSelectedCableType() == GBC;
 
     const uint32_t inactive = gbc ? link_getPin(SD_GBC) : link_getPin(SD_GBA);
         

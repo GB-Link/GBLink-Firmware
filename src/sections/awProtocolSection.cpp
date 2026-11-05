@@ -10,7 +10,7 @@
 #include "../linkStatus.hpp"
 
 
-#include "../layers/link/linkLayer.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 
 // Outbound MAW1 byte stream. Single producer (PIO done-ISR), single consumer

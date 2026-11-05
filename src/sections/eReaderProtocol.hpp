@@ -7,8 +7,7 @@
 #include "../link_defines.h"
 
 
-#include "../layers//link/cableDetection/cableDetection.hpp"
-#include "../layers/link/linkLayer.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 namespace erproto
 {
@@ -276,14 +275,13 @@ struct EReaderProxy
 
     // scToggled: SC clock activity observed since the previous beacon. SC is
     // the same pin for both cable types, so "SC toggling but zero words
-    // received" is proof of listening on the wrong SD pin — the host's
-    // cable-flip fallback keys on it.
+    // received" points at the wrong cable selection.
     void emitWireNoTraffic(bool scToggled)
     {
         const uint8_t pins =
             (link_readPartnerPins() & static_cast<uint8_t>(~0x01))
             | (scToggled ? 0x01 : 0x00);
-        emitWire(WIRE_FLAG_NO_TRAFFIC, cableDetection_getDetectedCableType(),
+        emitWire(WIRE_FLAG_NO_TRAFFIC, link_getSelectedCableType(),
                  static_cast<uint16_t>(pins));
     }
 

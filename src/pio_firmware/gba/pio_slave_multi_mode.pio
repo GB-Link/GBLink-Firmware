@@ -15,12 +15,12 @@ set pindirs, 0b0100 ; change SD to input, SO to output
 set x, 15
 
 ; poll SD when to start sampling
-poll:
-    mov isr, ~null      ; ISR = all 1s, shift count reset
-    in pins, 2          ; low 2 bits = GP4,GP3
-    mov x, ~isr         ; x == 0  <=>  both pins high
-    jmp !x poll
-
+; poll:
+;     mov isr, ~null      ; ISR = all 1s, shift count reset
+;     in pins, 2          ; low 2 bits = GP4,GP3
+;     mov x, ~isr         ; x == 0  <=>  both pins high
+;     jmp !x poll
+wait 0 pin 0                ; wait for start bit on SD
 irq PREP_NEXT_TRANSMISSION [23] ; wait one and a half bit before start sampling, irq early so it is avaible later
 
 receive_data:

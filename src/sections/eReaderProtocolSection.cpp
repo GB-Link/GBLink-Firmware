@@ -10,7 +10,7 @@
 #include "../layers/packet/packetLayer.hpp"
 #include "../layers/transport.hpp"
 #include "../layers/link/ereader/ereader.hpp"
-#include "../layers/link/linkLayer.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 RING_BUF_DECLARE(g_erOutRing, 2048);
 
@@ -21,15 +21,6 @@ static bool g_multiPioActive = false;
 // PIO (re)configuration sleeps, so the transport RX handler only flags it and
 // the section thread performs it from process().
 static volatile bool g_armRequested = false;
-
-// Wrong-pin watchdog: cable detection is a heuristic (a GBA parked on a link
-// screen, or a cable plugged in after detection, makes it pick the wrong SD
-// pin). The partner clocking SC while zero words arrive is proof of the wrong
-// pin — SC is the same pin for both cable types — so after sustained evidence
-// the section flips the SD path once per scan and re-arms.
-static constexpr int kWrongPinIntervals = 4;
-static bool g_sdPathFlipped = false;
-static int g_wrongPinIntervals = 0;
 
 // Raw storage instead of a static PacketLayer: its constructor self-registers
 // the link ISR callbacks, which must not happen at boot for a layer that only
@@ -62,11 +53,8 @@ static void ensurePioLink()
 {
     if (g_multiPioActive) return;
 
-    // Recycle the packet layer BEFORE touching the PIO (the wrong-pin flip
-    // re-arms with it live): ~PacketLayer disables the link, so running it
-    // after would kill the mode configured just below. The cable type is NOT
-    // re-sampled here — it was captured at mode entry, before the GBA's link
-    // screens start driving SO low.
+    // Recycle the packet layer BEFORE touching the PIO: ~PacketLayer disables
+    // the link, so running it after would kill the mode configured just below.
     erProto_shutdownPokemonPacketLayer();
 
     if (erproto::isSma4Profile(g_proxy.profile))
@@ -108,7 +96,6 @@ static void erProto_initPokemonPacketLayer()
     g_pokeLinkPlayerPending = false;
     g_pokePayloadPending = false;
     g_lpFinished = false;
-    //blockCommandReset();
 }
 
 static void logPacketFrame(erproto::EReaderProxy& proxy,
@@ -127,21 +114,15 @@ struct PokeSendContext : TransmitContext
 static TxValues pokeSendKeysTransive(TransmitContext* ctx)
 {
     auto* pokeCtx = static_cast<PokeSendContext*>(ctx);
-    TxValues txValues;
 
-    if (pokeCtx->pokeIdleIdx == 0)
-    {
-        pokeCtx->pokeIdleIdx++;
-        txValues.push(erproto::poke::kSendKeys);
-    }
-    else 
-    {
-        txValues.push(0x00);
-    }
+    const uint16_t value = (pokeCtx->pokeIdleIdx == 0) ? erproto::poke::kSendKeys : 0x00;
+
     pokeCtx->pokeIdleIdx++;
     if (pokeCtx->pokeIdleIdx >= 8) pokeCtx->pokeIdleIdx = 0;
-    return txValues;
+
+    return TxValues(value);
 }
+
 
 static CommandState pokeSendKeysDone(TransmitContext* ctx)
 {
@@ -149,18 +130,18 @@ static CommandState pokeSendKeysDone(TransmitContext* ctx)
     return CommandState::done;
 }
 
-static TransmitBehaviour pokeSendKeysIdle()
+TransmitBehaviour pokeSendKeysIdle()
 {
     std::unique_ptr<PokeSendContext> c = std::make_unique<PokeSendContext>();
     c->pokeIdleIdx = 0;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = pokeSendKeysTransive,
         .transmitDoneCallback = pokeSendKeysDone
     };
-    return std::move(transive);
+    return transive;
 }
 
 enum class LpPhase : uint8_t { preDelay, initFrame, postDelay, cont };
@@ -174,7 +155,6 @@ struct PokeLinkPlayerContext : TransmitContext
     uint8_t  lpPreDelayLeft  = 0;
     uint8_t  lpPostDelayLeft = 0;
     uint8_t  lpContFramesSent = 0;
-    bool     lpFinished = false;
     uint16_t lpTxFrame[8]    = {};
 };
 
@@ -261,8 +241,7 @@ static CommandState pokeLinkPlayerContDone(TransmitContext* ctx)
             pokeCtx->lpContFramesSent++;
             if (pokeCtx->lpContFramesSent >= 5)
             {
-                pokeCtx->lpFinished = true;
-                g_lpFinished = true; //FIXME
+                g_lpFinished = true;
                 return CommandState::done;
             }
             lpPrepareContFrame(static_cast<size_t>(pokeCtx->lpContFramesSent) * 14, pokeCtx);
@@ -272,24 +251,23 @@ static CommandState pokeLinkPlayerContDone(TransmitContext* ctx)
     return CommandState::resume;
 }
 
-static TransmitBehaviour pokeLinkPlayerContCommand()
+TransmitBehaviour pokeLinkPlayerContCommand()
 {
     std::unique_ptr<PokeLinkPlayerContext> c = std::make_unique<PokeLinkPlayerContext>();
     c->lpPhase         = LpPhase::preDelay;
     c->lpPreDelayLeft  = 2;
     c->lpPostDelayLeft = 2;
     c->lpContFramesSent = 0;
-    c->lpFinished      = false;
     c->lpFrameIdx      = 0;
     lpPrepareZeroFrame(c.get());
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = pokeLinkPlayerContTransive,
         .transmitDoneCallback = pokeLinkPlayerContDone
     };
-    return std::move(transive);
+    return transive;
 }
 
 static void pokemonArmLinkPlayerFull(PacketLayer& layer)
@@ -371,15 +349,8 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         layer.sendCommand(emptyCommand());
     }
 
-
-    //FIXME idle should be enoght to tell if command has been send in full?
-    // if (g_pokePayloadPending && blockCommandTransferComplete()
-    //     && blockCommandBytesSent() >= static_cast<uint16_t>(proxy.cardSize)
-    //     && layer.idle())
-    // Also, empty is set automaticly by packetLayer
-    if (layer.idle())
+    if (g_pokePayloadPending && layer.idle())
     {
-        //blockCommandConsumeComplete();
         g_pokePayloadPending = false;
         proxy.pokeSentPayload = true;
         proxy.pokeWaitingPayload = false;
@@ -435,9 +406,6 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
     const unsigned int key = irq_lock();
     if (cmd == erproto::HOST_START_SCAN)
     {
-        // Each scan gets a fresh wrong-pin recovery budget.
-        g_sdPathFlipped = false;
-        g_wrongPinIntervals = 0;
         if (!g_multiPioActive)
             g_armRequested = true;
     }
@@ -448,13 +416,8 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
         g_pokeLinkPlayerPending = false;
         g_pokePayloadPending = false;
         g_lpFinished = false;
-        //context is reset automaticlly when new command is run, no need to reset
-        // g_lpPhase = LpPhase::preDelay;
-        // g_lpPreDelayLeft = 0;
-        // g_lpPostDelayLeft = 0;
-        // g_lpContFramesSent = 0;
-        // g_lpPostWaitCount = 0;
-        //blockCommandReset();
+        g_lpPostWaitCount = 0;
+        
         if (g_pokemonPacketLive)
             pokemonPacket().sendCommand(emptyCommand());
     }
@@ -468,8 +431,6 @@ EReaderProtocolSection::EReaderProtocolSection(erproto::Profile profile)
     ring_buf_reset(&g_erOutRing);
     g_multiPioActive = false;
     g_armRequested = false;
-    g_sdPathFlipped = false;
-    g_wrongPinIntervals = 0;
 
     new (&g_proxy) erproto::EReaderProxy();
     g_proxy.profile = profile;
@@ -538,20 +499,6 @@ void EReaderProtocolSection::process()
             const bool scToggled = scSeenLow && scSeenHigh;
             scSeenLow = false;
             scSeenHigh = false;
-
-            if (g_proxy.scanArmed && scToggled
-                && link_receivedWordCount() == 0)
-                g_wrongPinIntervals++;
-
-            if (!g_sdPathFlipped && g_wrongPinIntervals >= kWrongPinIntervals)
-            {
-                g_sdPathFlipped = true;
-                cableDetection_flipSdPinPath();
-                g_multiPioActive = false;
-                ensurePioLink();
-                g_proxy.emitWire(erproto::WIRE_FLAG_SD_FLIPPED,
-                                 cableDetection_getDetectedCableType(), 0);
-            }
 
             if (g_proxy.wireLogEnabled)
             {

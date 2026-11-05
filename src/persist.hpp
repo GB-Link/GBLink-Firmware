@@ -13,16 +13,26 @@ enum LedSlot : uint8_t {
     LED_SLOT_GBC = 2,         // GB/GBC link (blue)
     LED_SLOT_PRINTER = 3,     // GB printer (purple)
     LED_SLOT_ADVANCE_WARS = 4,// Advance Wars (white)
-    LED_SLOT_EREADER = 5,
-    LED_SLOT_COUNT = 6,
+    LED_SLOT_EREADER = 5,  // e-Reader (light blue)
+    LED_SLOT_BATTLE_CHIP_GATE = 6, // Battle Chip Gate (deep blue)
+    LED_SLOT_COUNT = 7,
 };
 
 // WebUSB landing-page advertising. Default (unwritten flash) is enabled.
 bool landingPageEnabled();
 void setLandingPageEnabled(bool enabled);
 
-// Cable/SD-pin selection for GBA modes (CABLE_*), applied at boot as the cable
-// override. Fresh installs default to GBC; pre-v7 settings load as auto-detect.
+// Cable/SD-pin selection for GBA modes. Values are part of the host protocol
+// and the stored settings. There is no auto-detection anymore: CABLE_AUTO is
+// kept for older settings/web apps and is treated as GBC.
+enum CableSelection : uint8_t
+{
+    CABLE_AUTO = 0,
+    CABLE_FORCE_GBA = 1,
+    CABLE_FORCE_GBC = 2
+};
+
+// Fresh installs default to GBC; pre-v7 settings load as CABLE_AUTO.
 uint8_t getCableSelection();
 void setCableSelection(uint8_t cable); // out-of-range values ignored
 

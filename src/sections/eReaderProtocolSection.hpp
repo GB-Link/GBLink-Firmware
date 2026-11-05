@@ -7,7 +7,7 @@
 
 #include <zephyr/kernel.h>
 
-#include "../layers/link/linkLayer.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 
 class EReaderProtocolSection

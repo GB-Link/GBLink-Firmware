@@ -1,7 +1,6 @@
 #include "multiMode.hpp"
 #include "multiModePio.hpp"
-#include "./../linkLayer.hpp"
-#include "./../cableDetection/cableDetection.hpp"
+#include "./../gbaLinkLayer.hpp"
 
 #include <zephyr/kernel.h>
 
@@ -36,7 +35,7 @@ static void configureMaster()
 {
     link_disable();
 
-    enum CableType cableType = cableDetection_getDetectedCableType();
+    enum CableType cableType = link_getSelectedCableType();
     link_configureCableType(cableType);
     switch (cableType)
     {
@@ -65,9 +64,7 @@ static void configureSlave(void)
 {
     link_disable();
 
-    cableDetection_enableSlaveMonitoring(true);
-
-    enum CableType cableType = cableDetection_getDetectedCableType();
+    enum CableType cableType = link_getSelectedCableType();
     link_configureCableType(cableType);
 
     switch (cableType)

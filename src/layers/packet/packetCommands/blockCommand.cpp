@@ -16,16 +16,15 @@ struct BlockCommandContext : TransmitContext
     uint16_t index = 0;
     bool initSend = false;
     uint16_t blockMaxSize = 0;
-    bool transferComplete = false;
 
     uint16_t blockCommandInit[8] = { LINKCMD_INIT_BLOCK, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint16_t blockCommandContent[8] = {LINKCMD_CONT_BLOCK, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 };
 
-CommandState blockCommandChunk(TransmitContext* ctx)
+static CommandState blockCommandChunk(TransmitContext* ctx)
 {
     auto* blockCtx = static_cast<BlockCommandContext*>(ctx);
-    if (blockCtx->blockMaxSize == 0) { blockCtx->transferComplete = true; return CommandState::done; }
+    if (blockCtx->blockMaxSize == 0) return CommandState::done;
 
     if (!blockCtx->initSend) return CommandState::resume;
 
@@ -44,20 +43,6 @@ CommandState blockCommandChunk(TransmitContext* ctx)
     blockCtx->pos += chunkSize;
     return CommandState::resume;
 }
-
-// bool blockCommandTransferComplete() { return g_transferComplete; }
-// uint16_t blockCommandBytesSent() { return g_pos; }
-// void blockCommandConsumeComplete() { g_transferComplete = false; }
-// void blockCommandReset()
-// {
-//     g_src = nullptr;
-//     g_srcSize = 0;
-//     g_pos = 0;
-//     g_index = 0;
-//     g_initSend = false;
-//     g_blockMaxSize = 0;
-//     g_transferComplete = false;
-// }
 
 static TxValues blockCommandTransive(TransmitContext* ctx)
 {
@@ -86,15 +71,14 @@ TransmitBehaviour blockCommand(const void* src, uint16_t size, uint16_t blockMax
     c->initSend = false;
     c->pos = 0;
     c->blockMaxSize = blockMaxSize;
-    c->transferComplete = false;
     c->blockCommandInit[BLOCK_SIZE_INDEX] = blockMaxSize;
 
-    static TransmitBehaviour transive
+    TransmitBehaviour transive
     {
         .context = std::move(c),
         .transmitCallback = blockCommandTransive,
         .transmitDoneCallback = blockCommandChunk
     };
 
-    return std::move(transive);
+    return transive;
 }

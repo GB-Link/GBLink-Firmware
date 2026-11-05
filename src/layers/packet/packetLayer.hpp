@@ -1,5 +1,5 @@
 #include "../link/multiMode/multiMode.hpp"
-#include "../link/linkLayer.hpp"
+#include "../link/gbaLinkLayer.hpp"
 #include "./packetCommands/commands.hpp"
 #include "../../link_defines.h"
 
@@ -66,6 +66,9 @@ public:
     ~PacketLayer()
     {
         awaitDisable();
+        link_setTransmitCallback(nullptr, nullptr);
+        link_setReceiveCallback(nullptr, nullptr);
+        link_setTransiveDoneCallback(nullptr, nullptr);
     }
 
     void sendCommand(TransmitBehaviour handler)
@@ -262,7 +265,7 @@ private:
 private:
     atomic_t m_waitForDisable = 0;
 
-    bool m_idle = true;
+    volatile bool m_idle = true;
     uint8_t m_seatNumber = 1;
     uint8_t m_playerCount = 2;
 
