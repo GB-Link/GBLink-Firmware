@@ -9,6 +9,7 @@ enum class LinkStatus : uint16_t
     GameboyDisconnected = 0xFF01,
 
     AwaitMode = 0xFF02,
+    AwaitPlayerSettings = AwaitMode,    // GBA link mode: answered with SetPlayerSettings
     HandshakeReceived = 0xFF03,
     HandshakeFinished = 0xFF04,
 

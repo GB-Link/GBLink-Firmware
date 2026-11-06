@@ -1,11 +1,6 @@
 #include "persist.hpp"
 #include "hardware.hpp"
 
-extern "C"
-{
-    #include "layers/linkLayer.h" // CABLE_* selection values
-}
-
 #include <cstring>
 #include <zephyr/storage/flash_map.h>
 
@@ -22,7 +17,7 @@ namespace
         uint8_t version;
         uint8_t landing;                       // 0 = disabled, else enabled
         uint8_t led[LED_SLOT_COUNT][3];        // per-slot logical RGB
-        uint8_t cable;                         // CABLE_* SD-pin selection
+        // Up to 2.2.8 the next byte held the cable selection: a field added here needs a version bump.
     };
 
     // Real-colour defaults at a uniform 12.5% brightness (32/255) so every mode's
@@ -43,12 +38,10 @@ namespace
         s.version = SETTINGS_VERSION;
         s.landing = 1;
         memcpy(s.led, kDefaultColors, sizeof(s.led));
-        s.cable = CABLE_FORCE_GBC;
     }
 
     // Defaults when flash is unwritten; older layouts migrate in place (written
-    // back on the next save). Pre-v7 loads cable = auto-detect so an updated
-    // adapter keeps its pre-selection behavior.
+    // back on the next save).
     PersistSettings loadSettings()
     {
         PersistSettings s{};
@@ -62,22 +55,14 @@ namespace
 
         if (s.magic != SETTINGS_MAGIC) {
             fillDefaults(s);
-        } else if (s.version == 6) {
+        } else if (s.version == 6 || s.version == 7) {
+            // No Battle Chip Gate slot yet (v7 kept its cable selection there).
             s.version = SETTINGS_VERSION;
-            s.cable = CABLE_AUTO;
             memcpy(s.led[LED_SLOT_BATTLE_CHIP_GATE],
                    kDefaultColors[LED_SLOT_BATTLE_CHIP_GATE], 3);
-        } else if (s.version == 7) {
-            const uint8_t cable = s.led[LED_SLOT_BATTLE_CHIP_GATE][0];
-            memcpy(s.led[LED_SLOT_BATTLE_CHIP_GATE],
-                   kDefaultColors[LED_SLOT_BATTLE_CHIP_GATE], 3);
-            s.cable = (cable <= CABLE_FORCE_GBC) ? cable : CABLE_FORCE_GBC;
-            s.version = SETTINGS_VERSION;
         } else if (s.version != SETTINGS_VERSION) {
             fillDefaults(s);
-            s.cable = CABLE_AUTO;
         }
-        if (s.cable > CABLE_FORCE_GBC) s.cable = CABLE_FORCE_GBC;
         return s;
     }
 
@@ -103,20 +88,6 @@ void setLandingPageEnabled(bool enabled)
 {
     PersistSettings s = loadSettings();
     s.landing = enabled ? 1 : 0;
-    saveSettings(s);
-}
-
-uint8_t getCableSelection()
-{
-    return loadSettings().cable;
-}
-
-void setCableSelection(uint8_t cable)
-{
-    if (cable > CABLE_FORCE_GBC) return;
-    PersistSettings s = loadSettings();
-    if (s.cable == cable) return; // skip the sector erase on a no-op
-    s.cable = cable;
     saveSettings(s);
 }
 

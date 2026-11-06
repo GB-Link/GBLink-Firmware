@@ -1,6 +1,6 @@
 #include <span>
 
-#include "../layers/packetLayer.hpp"
+#include "../layers/legacyPacketLayer.hpp"
 #include "../layers/usbLayer.hpp"
 
 #include "nextSectionState.hpp"

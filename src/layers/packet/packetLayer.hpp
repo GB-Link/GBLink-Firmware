@@ -1,19 +1,12 @@
+#include "../link/multiMode/multiMode.hpp"
+#include "../link/linkLayer.hpp"
+#include "./packetCommands/commands.hpp"
+#include "../../link_defines.h"
 
 #include <cstdint>
-extern "C"
-{
-    #include "linkLayer.h"
-}
-
-#include "../callbacks/commands.hpp"
-#include "../link_defines.h"
-
-#ifdef CONFIG_STM32F0
-#include "masterClock.hpp"
-#endif
-
 #include <span>
 #include <optional>
+#include <utility>
 #include <zephyr/drivers/gpio.h>
 
 #pragma once
@@ -30,7 +23,7 @@ public:
     struct TransiveResult
     {
         std::span<const uint16_t> received;
-        std::span<const uint16_t> transmitted;
+        std::span<TxValues> transmitted;
     };
 
 private:
@@ -49,9 +42,10 @@ private:
         connect
     };
 
-    static constexpr uint32_t timingHandshake = 30097;
-    static constexpr uint32_t timingCommandBytes = 1378;
-    static constexpr uint32_t timingBetweenCommands = 12953;
+    //cycle timings, each cycle is 0.5425 µs
+    static constexpr std::array<uint32_t, 3> timingHandshake = {29868, 29551, 29282};
+    static constexpr std::array<uint32_t, 3> timingCommandBytes = {1098, 1166, 1178};
+    static constexpr std::array<uint32_t, 3> timingBetweenCommands = {12673, 9758, 7253};
 
 public:
     PacketLayer()
@@ -74,11 +68,10 @@ public:
         awaitDisable();
     }
 
-    void setTransiveHandler(struct TransiveStruct handler)
+    void sendCommand(TransmitBehaviour handler)
     {
-        m_handler = handler;
+        m_handler = std::move(handler);
         m_idle = false;
-        if (handler.init != nullptr) handler.init(handler.userData);
     }
     
     TransiveResult awaitTransiveResults()
@@ -107,7 +100,7 @@ public:
         return m_receivedHandshake;
     }
 
-    uint16_t getTransmittedHandshake()
+    TxValues getTransmittedHandshake()
     {
         k_sem_take(&m_handshakeSemaphore, K_FOREVER);
         return m_transmitedHandShake;
@@ -128,31 +121,28 @@ public:
 
     void connectHandshake() { m_handshakeState = HandShakeState::connect; }
 
-    bool isHandshakeEnabled() { return m_transmitedHandShake == LINK_SLAVE_HANDSHAKE; }
+    bool isHandshakeEnabled() { return m_transmitedHandShake[0] == LINK_SLAVE_HANDSHAKE; }
 
-    void setMode(Mode mode) 
+    void configurePlayer(uint8_t seatNumber, uint8_t playerCount)
     {   
-        switch (mode)
+        m_playerCount = playerCount;
+        m_seatNumber = seatNumber;
+
+        if (seatNumber == 0)
         {
-            case Mode::master:
-                link_changeMode(MASTER);
-                #ifdef CONFIG_STM32F0
-                m_masterClock.enableSync();
-                #endif
-                break;
-            
-            case Mode::slave:
-                link_changeMode(SLAVE);
-                #ifdef CONFIG_STM32F0
-                m_masterClock.disableSync();
-                #endif
-                break;
+             
+            multiMode_selectMode(SLAVE);
+        }
+        else
+        {
+            multiMode_selectMode(MASTER);
         }
 
-        m_mode = mode;
+       
     }
 
-    Mode getMode() { return m_mode; }
+    uint8_t getSeatNumber() { return m_seatNumber; }
+
 
 private:
 
@@ -175,10 +165,10 @@ private:
     {
         switch(m_state)
         {
-            case TransiveState::crc: return {transmitCrc(), m_timingUs};
-            case TransiveState::command: return {transmitCommand(), m_timingUs};
-            case TransiveState::handshake: return {transmitHandshake(), m_timingUs};
-            default: return {0x00, m_timingUs};
+            case TransiveState::crc: return {m_seatNumber, transmitCrc(), m_timingUs};
+            case TransiveState::command: return {m_seatNumber, transmitCommand(), m_timingUs};
+            case TransiveState::handshake: return {m_seatNumber, transmitHandshake(), m_timingUs};
+            default: return {0, {}, m_timingUs};
         };
     }
 
@@ -189,30 +179,57 @@ private:
         m_receivedHandshake = rxBytes;
     }
 
-    uint16_t transmitHandshake()
+    TxValues transmitHandshake()
     {
-        // Don't set m_transmitedHandShake from outside to advance handshake state
-        // Setting m_transmitedHandShake will create race conditions bad things happen
+        TxValues handshakes;
+
+        uint16_t handshakeValue = 0;
         switch(m_handshakeState)
         {
-            case HandShakeState::disabled: return LINK_HANDSHAKE_DISABLE;
-            case HandShakeState::enabled: return LINK_SLAVE_HANDSHAKE;
-            case HandShakeState::connect: return LINK_MASTER_HANDSHAKE;
+            case HandShakeState::disabled:
+                handshakeValue = LINK_HANDSHAKE_DISABLE;
+                break;
+            case HandShakeState::enabled:
+                handshakeValue = LINK_SLAVE_HANDSHAKE;
+                break;
+            case HandShakeState::connect:
+                handshakeValue = LINK_SLAVE_HANDSHAKE;
+                break;
         }
 
-        return 0xDEAD;
+        for (uint8_t i = 0; i < m_playerCount - 1; i++)
+        {
+            if (m_handshakeState == HandShakeState::connect && i == 0)
+            {
+                handshakes.push(LINK_MASTER_HANDSHAKE);
+            }
+            else 
+            {
+                handshakes.push(handshakeValue);
+            }
+            
+        }
+
+        return handshakes;
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
     void receiveCrc(uint16_t rxBytes)
     {
+        (void)rxBytes;
         // don't care
     }
 
-    uint16_t transmitCrc()
+    TxValues transmitCrc()
     {
-        return m_crc;
+        TxValues crcValues;
+        for (uint8_t i = 0; i < m_playerCount - 1; i++)
+        {
+            crcValues.push(m_crc);
+        }
+        
+        return crcValues;
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -224,18 +241,21 @@ private:
         m_commandIndex++;
     }
 
-    uint16_t transmitCommand()
+    TxValues transmitCommand()
     {
-        uint16_t txBytes = (m_handler.transive != nullptr) ? m_handler.transive() : 0x00;
-        m_crc += txBytes;
-        m_transmittedCommand[m_transmitCommandIndex] = txBytes;
+        TxValues txValues = m_handler.transmit();
+        m_transmittedCommand[m_transmitCommandIndex] = txValues;
+        for (uint8_t i = 0; i < m_playerCount - 1; i++)
+        {
+            m_crc += txValues[i];
+        }
         m_transmitCommandIndex++;
-        return txBytes;
+        return txValues;
     }
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-    void onTransiveDone(uint16_t rxBytes, uint16_t txBytes);
+    void onTransiveDone(uint16_t rxBytes, TxValues txValues);
 
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -243,10 +263,11 @@ private:
     atomic_t m_waitForDisable = 0;
 
     bool m_idle = true;
-    Mode m_mode = Mode::slave;
+    uint8_t m_seatNumber = 1;
+    uint8_t m_playerCount = 2;
 
     uint16_t m_receivedHandshake = LINK_HANDSHAKE_DISABLE;
-    uint16_t m_transmitedHandShake = LINK_HANDSHAKE_DISABLE;
+    TxValues m_transmitedHandShake;
     uint16_t m_crc = LINK_SLAVE_HANDSHAKE; //first crc is always handshake
 
     uint32_t m_timingUs = 0;
@@ -258,16 +279,14 @@ private:
     int m_commandIndex = 0;
     std::array<uint16_t, 8> m_receivedCommand = {};
     int m_transmitCommandIndex = 0;
-    std::array<uint16_t, 8> m_transmittedCommand = {};
+    std::array<TxValues, 8> m_transmittedCommand = {};
 
-    TransiveStruct m_handler = emptyCommand();
+    TransmitBehaviour m_handler = emptyCommand();
     TransiveState m_state = TransiveState::handshake;
     HandShakeState m_handshakeState = HandShakeState::disabled;
 
     struct k_timer m_timeoutTimer;
-    #ifdef CONFIG_STM32F0
-    MasterClock m_masterClock;
-    #endif
+
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
     // Callbacks
     //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -284,18 +303,11 @@ private:
         return self->onTransmit();
     }
 
-    static void transiveDoneCallback(uint16_t rxBytes, uint16_t txBytes, void* userData)
+    static void transiveDoneCallback(uint16_t rxBytes, TxValues txValues, void* userData)
     {
         PacketLayer* self = static_cast<PacketLayer*>(userData);
-        self->onTransiveDone(rxBytes, txBytes);
+        self->onTransiveDone(rxBytes, txValues);
     }
 
-    #ifdef CONFIG_STM32F0
-    static void packetTimeout(struct k_timer *timer)
-    {
-        void* userData = k_timer_user_data_get(timer);
-        PacketLayer* self = static_cast<PacketLayer*>(userData);
-        self->reset();
-    }
-    #endif
+
 };

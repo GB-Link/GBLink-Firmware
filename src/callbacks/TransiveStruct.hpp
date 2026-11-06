@@ -2,6 +2,9 @@
 #include <span>
 #pragma once
 
+namespace legacy
+{
+
 enum class CommandState
 {
     resume,
@@ -20,3 +23,5 @@ struct TransiveStruct
     TransiveCallback transive;
     TransiveDoneCallback transiveDone;
 };
+
+}

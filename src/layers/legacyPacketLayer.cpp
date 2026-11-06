@@ -1,7 +1,10 @@
-#include "packetLayer.hpp"
+#include "legacyPacketLayer.hpp"
 #include "linkLayer.h"
 #include "syscalls/kernel.h"
 #include <cerrno>
+
+namespace legacy
+{
 
 void PacketLayer::onTransiveDone(uint16_t rxBytes, uint16_t txBytes)
 {
@@ -77,4 +80,6 @@ bool PacketLayer::awaitDisable()
     
     link_changeMode(DISABLED);
     return true;
+}
+
 }

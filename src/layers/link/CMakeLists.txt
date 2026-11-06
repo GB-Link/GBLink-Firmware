@@ -1,0 +1,4 @@
+
+zephyr_library_sources_ifdef(CONFIG_SOC_FAMILY_RPI_PICO linkLayer.cpp)
+
+add_subdirectory(multiMode)

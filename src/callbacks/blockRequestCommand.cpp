@@ -1,5 +1,7 @@
 #include "blockRequestCommand.hpp"
 
+namespace legacy
+{
 
 uint8_t g_index = 0;
 
@@ -28,4 +30,6 @@ TransiveStruct blockRequest()
     };
 
     return transive;
+}
+
 }

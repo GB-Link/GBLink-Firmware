@@ -10,6 +10,8 @@ extern "C"
 
 #include <zephyr/drivers/gpio.h>
 
+using namespace legacy;
+
 NextSection TradeSetup::process()
 {
     #ifdef CONFIG_SECTIONS_USE_MASTER_MODE

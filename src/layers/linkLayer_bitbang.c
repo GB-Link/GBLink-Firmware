@@ -40,13 +40,13 @@
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 void* g_receiveUserData = NULL;
-static ReceiveHandler g_receiveCallback = NULL;
+static LegacyReceiveHandler g_receiveCallback = NULL;
 
 void* g_transmitUserData = NULL;
-static TransmitHandler g_transmitCallback = NULL;
+static LegacyTransmitHandler g_transmitCallback = NULL;
 
 void* g_transiveDoneUserdata = NULL;
-static TransiveDoneHandler g_transiveDoneCallback = NULL;
+static LegacyTransiveDoneHandler g_transiveDoneCallback = NULL;
 
 static enum LinkMode g_mode = SLAVE;
 
@@ -246,19 +246,19 @@ static void dmaCompleteReceive(const struct device *dev, void *user_data, uint32
 // Interface
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setTransmitCallback(TransmitHandler cb, void* userData) 
+void link_setLegacyTransmitCallback(LegacyTransmitHandler cb, void* userData) 
 {
     g_transmitUserData = userData;
     g_transmitCallback = cb;
 }
 
-void link_setReceiveCallback(ReceiveHandler cb, void* userData) 
+void link_setLegacyReceiveCallback(LegacyReceiveHandler cb, void* userData) 
 {
     g_receiveUserData = userData;
     g_receiveCallback = cb;
 }
 
-void link_setTransiveDoneCallback(TransiveDoneHandler cb, void* user_data)
+void link_setLegacyTransiveDoneCallback(LegacyTransiveDoneHandler cb, void* user_data)
 {
     g_transiveDoneUserdata = user_data;
     g_transiveDoneCallback = cb;

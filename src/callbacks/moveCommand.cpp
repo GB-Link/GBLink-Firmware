@@ -1,5 +1,7 @@
 #include "moveCommand.hpp"
 
+namespace legacy
+{
 
 static uint8_t g_index = 0;
 static size_t g_repeats = 0;
@@ -49,4 +51,6 @@ TransiveStruct moveCommand()
     };
 
     return transive;
+}
+
 }

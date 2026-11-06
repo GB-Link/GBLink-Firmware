@@ -30,7 +30,7 @@ private:
 
     void flushRxBuffer();
 
-    static struct NextTransmit transmitCallback(void* userData);
+    static struct LegacyTransmit transmitCallback(void* userData);
     static void receiveCallback(uint16_t rx, void* userData);
     static void transiveDoneCallback(uint16_t rx, uint16_t tx, void* userData);
 

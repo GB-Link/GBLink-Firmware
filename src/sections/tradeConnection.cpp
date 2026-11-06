@@ -10,6 +10,8 @@ extern "C"
 }
 #include "../callbacks/commands.hpp"
 
+using namespace legacy;
+
 void TradeConnection::handleInitialDataExchange()
 {
     connectAsMaster();

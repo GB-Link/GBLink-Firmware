@@ -7,7 +7,7 @@
 
 #include "../callbacks/blockCommand.hpp"
 #include "../callbacks/commands.hpp"
-#include "../layers/packetLayer.hpp"
+#include "../layers/legacyPacketLayer.hpp"
 #include "../layers/transport.hpp"
 #include "../link_defines.h"
 
@@ -15,6 +15,8 @@ extern "C"
 {
     #include "../layers/linkLayer.h"
 }
+
+using namespace legacy;
 
 RING_BUF_DECLARE(g_erOutRing, 2048);
 
@@ -37,7 +39,7 @@ static PacketLayer& pokemonPacket()
     return *std::launder(reinterpret_cast<PacketLayer*>(g_pokemonPacketStorage));
 }
 
-static struct NextTransmit sma4TransmitCallback(void*);
+static struct LegacyTransmit sma4TransmitCallback(void*);
 static void sma4ReceiveCallback(uint16_t rx, void*);
 
 static bool g_pokeLinkPlayerPending = false;
@@ -57,11 +59,8 @@ static void ensurePioLink()
 {
     if (g_multiPioActive) return;
 
-    // Recycle the packet layer BEFORE touching the PIO (the wrong-pin flip
-    // re-arms with it live): ~PacketLayer disables the link, so running it
-    // after would kill the mode configured just below. The cable type is NOT
-    // re-sampled here — it was captured at mode entry, before the GBA's link
-    // screens start driving SO low.
+    // Recycle the packet layer BEFORE touching the PIO: ~PacketLayer disables
+    // the link, so running it after would kill the mode configured just below.
     erProto_shutdownPokemonPacketLayer();
 
     if (erproto::isSma4Profile(g_proxy.profile))
@@ -87,9 +86,9 @@ static void erProto_shutdownPokemonPacketLayer()
     pokemonPacket().~PacketLayer();
     // The constructor self-registered the link ISR callbacks; nothing may keep
     // pointing at the destroyed instance.
-    link_setTransmitCallback(nullptr, nullptr);
-    link_setReceiveCallback(nullptr, nullptr);
-    link_setTransiveDoneCallback(nullptr, nullptr);
+    link_setLegacyTransmitCallback(nullptr, nullptr);
+    link_setLegacyReceiveCallback(nullptr, nullptr);
+    link_setLegacyTransiveDoneCallback(nullptr, nullptr);
     g_pokemonPacketLive = false;
 }
 
@@ -368,7 +367,7 @@ static void pokemonPumpPacketLayer()
         pokemonHandleTransiveFrame(proxy, layer, *result);
 }
 
-static struct NextTransmit sma4TransmitCallback(void*)
+static struct LegacyTransmit sma4TransmitCallback(void*)
 {
     return { g_proxy.stagedTx, 15370 };
 }
@@ -440,8 +439,8 @@ EReaderProtocolSection::EReaderProtocolSection(erproto::Profile profile)
     if (erproto::isSma4Profile(profile))
     {
         g_proxy.stagedTx = g_proxy.sma4HandshakeId();
-        link_setTransmitCallback(&sma4TransmitCallback, nullptr);
-        link_setReceiveCallback(&sma4ReceiveCallback, nullptr);
+        link_setLegacyTransmitCallback(&sma4TransmitCallback, nullptr);
+        link_setLegacyReceiveCallback(&sma4ReceiveCallback, nullptr);
     }
     else
     {
@@ -455,9 +454,9 @@ EReaderProtocolSection::~EReaderProtocolSection()
 {
     g_sessionActive = false;
     erProto_shutdownPokemonPacketLayer();
-    link_setTransmitCallback(nullptr, nullptr);
-    link_setReceiveCallback(nullptr, nullptr);
-    link_setTransiveDoneCallback(nullptr, nullptr);
+    link_setLegacyTransmitCallback(nullptr, nullptr);
+    link_setLegacyReceiveCallback(nullptr, nullptr);
+    link_setLegacyTransiveDoneCallback(nullptr, nullptr);
 }
 
 void EReaderProtocolSection::armLink()

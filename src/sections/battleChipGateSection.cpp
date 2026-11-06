@@ -17,7 +17,7 @@ static constexpr int kStatusIntervalLoops = 50;
 static constexpr int kLoopSleepMs = 10;
 static constexpr uint32_t kSlaveTimingUs = 15370;
 
-static struct NextTransmit transmitCallback(void*)
+static struct LegacyTransmit transmitCallback(void*)
 {
     return { g_proxy.stagedTx, kSlaveTimingUs };
 }
@@ -66,8 +66,8 @@ BattleChipGateSection::BattleChipGateSection(bcgproto::GateType initialGateType)
     new (&g_proxy) bcgproto::BcgProxy();
     g_proxy.reset(initialGateType);
 
-    link_setTransmitCallback(&transmitCallback, nullptr);
-    link_setReceiveCallback(&receiveCallback, nullptr);
+    link_setLegacyTransmitCallback(&transmitCallback, nullptr);
+    link_setLegacyReceiveCallback(&receiveCallback, nullptr);
 
     g_sessionActive = true;
 }
@@ -75,8 +75,8 @@ BattleChipGateSection::BattleChipGateSection(bcgproto::GateType initialGateType)
 BattleChipGateSection::~BattleChipGateSection()
 {
     g_sessionActive = false;
-    link_setTransmitCallback(nullptr, nullptr);
-    link_setReceiveCallback(nullptr, nullptr);
+    link_setLegacyTransmitCallback(nullptr, nullptr);
+    link_setLegacyReceiveCallback(nullptr, nullptr);
 }
 
 void BattleChipGateSection::armLink()

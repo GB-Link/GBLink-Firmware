@@ -1,6 +1,9 @@
 #include "blockCommandRequestCommand.hpp"
 #include "../link_defines.h"
 
+namespace legacy
+{
+
 static uint8_t index = 0;
 static uint16_t g_type = 0;
 
@@ -34,4 +37,6 @@ TransiveStruct sendBlockCommandRequestCommand(uint16_t type)
     };
 
     return transive;
+}
+
 }

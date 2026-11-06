@@ -3,6 +3,9 @@
 
 #pragma once
 
+namespace legacy
+{
+
 void blockCommandSetup(const void* src, uint16_t size, uint16_t blockMaxSize);
 
 CommandState blockCommandChunk();
@@ -16,4 +19,4 @@ uint16_t blockCommandBytesSent();
 void blockCommandConsumeComplete();
 void blockCommandReset();
 
-
+}

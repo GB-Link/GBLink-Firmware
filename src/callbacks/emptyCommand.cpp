@@ -1,5 +1,8 @@
 #include "emptyCommand.hpp"
 
+namespace legacy
+{
+
 uint16_t emptyCommandTransive()
 {
     return 0x00;
@@ -15,4 +18,6 @@ TransiveStruct emptyCommand()
     };
 
     return transive;
+}
+
 }

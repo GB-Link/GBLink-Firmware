@@ -303,14 +303,13 @@ struct EReaderProxy
 
     // scToggled: SC clock activity observed since the previous beacon, so the
     // host can tell a partner that clocks without any word arriving (no SD wire
-    // in the cable) from an idle one. rx carries the GetCableType value.
+    // in the cable) from an idle one. rx is always 0.
     void emitWireNoTraffic(bool scToggled)
     {
         const uint8_t pins =
             (link_readPartnerPins() & static_cast<uint8_t>(~0x01))
             | (scToggled ? 0x01 : 0x00);
-        emitWire(WIRE_FLAG_NO_TRAFFIC, link_getDetectedCableType(),
-                 static_cast<uint16_t>(pins));
+        emitWire(WIRE_FLAG_NO_TRAFFIC, 0, static_cast<uint16_t>(pins));
     }
 
     void noteWireRound(uint16_t rx, uint16_t tx)

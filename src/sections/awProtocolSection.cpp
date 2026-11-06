@@ -22,7 +22,7 @@ static awproto::Maw1StreamParser g_parser;
 // pre-session noise out.
 static volatile bool g_sessionActive = false;
 
-static struct NextTransmit transmitCallback(void*)
+static struct LegacyTransmit transmitCallback(void*)
 {
     return { g_proxy.stagedTx, g_proxy.stagedTiming };
 }
@@ -85,8 +85,8 @@ AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum LinkMode
 
     ring_buf_reset(&g_awOutRing);
 
-    link_setTransmitCallback(&transmitCallback, nullptr);
-    link_setReceiveCallback(&receiveCallback, nullptr);
+    link_setLegacyTransmitCallback(&transmitCallback, nullptr);
+    link_setLegacyReceiveCallback(&receiveCallback, nullptr);
 
     g_sessionActive = true;
 }
@@ -97,8 +97,8 @@ AwProtocolSection::~AwProtocolSection()
 
     // The module disables the link (link_changeMode(DISABLED)) before this
     // destructor runs, so no PIO ISR can race the deregistration below.
-    link_setTransmitCallback(nullptr, nullptr);
-    link_setReceiveCallback(nullptr, nullptr);
+    link_setLegacyTransmitCallback(nullptr, nullptr);
+    link_setLegacyReceiveCallback(nullptr, nullptr);
 }
 
 void AwProtocolSection::process()

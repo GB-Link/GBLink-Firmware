@@ -38,15 +38,20 @@ BUILD_ASSERT(LINK_PIN_SI == LINK_PIN_SC + 1 && LINK_PIN_SO == LINK_PIN_SC + 2 &&
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 void* g_receiveUserData = NULL;
-static ReceiveHandler g_receiveCallback = NULL;
+static LegacyReceiveHandler g_receiveCallback = NULL;
 
 void* g_transmitUserData = NULL;
-static TransmitHandler g_transmitCallback = NULL;
+static LegacyTransmitHandler g_transmitCallback = NULL;
 
 void* g_transiveDoneUserdata = NULL;
-static TransiveDoneHandler g_transiveDoneCallback = NULL;
+static LegacyTransiveDoneHandler g_transiveDoneCallback = NULL;
 
 static enum LinkMode g_mode = SLAVE;
+
+/* Set while the state machine is lent to the 2-4 player programs (link_lendStateMachine). */
+static LinkIrqHandler volatile g_lentIrq0 = NULL;
+static LinkIrqHandler volatile g_lentIrq1 = NULL;
+static LinkIrqHandler volatile g_lentRevoke = NULL;
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -130,28 +135,9 @@ RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave, 0, 29,
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-/* Cable selection from SetCableOverride / SetCableSelection. Stored for GetCableType only. */
-static uint8_t g_cableOverride = CABLE_AUTO;
-
-/* Pin the last clean word of the current session arrived on (SD_PIN_GP3 / SD_PIN_GP4), 0 before any. */
-static volatile uint8_t g_sdSeen = 0;
-
 /* Master: pin the GBA answers on, 0 until it has answered in this session. Each word is driven on this pin
  * only, so the first transfer leaves SD released and the GBA's reply to it shows which pin carries SD. */
 static volatile uint8_t g_sdTxMask = 0;
-
-enum CableType link_getDetectedCableType(void)
-{
-    if (g_sdSeen == SD_PIN_GP3) return GBA;
-    if (g_sdSeen == SD_PIN_GP4) return GBC;
-    return g_cableOverride == CABLE_FORCE_GBA ? GBA : GBC;
-}
-
-void link_setCableOverride(uint8_t mode)
-{
-    if (mode > CABLE_FORCE_GBC) mode = CABLE_AUTO;
-    g_cableOverride = mode;
-}
 
 static PIO g_pio = NULL;
 static size_t g_sm = 0;
@@ -173,17 +159,18 @@ uint32_t link_getReceivedWordCount(void)
 static void pioIsr_done(const void* arg)
 {
     (void)arg;
+    if (g_lentIrq0)
+    {
+        g_lentIrq0();
+        return;
+    }
     g_rx_words++;
     const bool fresh = !pio_sm_is_rx_fifo_empty(g_pio, g_sm);
     const uint32_t raw = pio_sm_get(g_pio, g_sm);
     if (fresh)
     {
         const uint8_t pin = sdPinsFramePin(raw);
-        if (pin)
-        {
-            g_sdSeen = pin;
-            if (g_mode == MASTER) g_sdTxMask = pin;
-        }
+        if (pin && g_mode == MASTER) g_sdTxMask = pin;
     }
     const uint16_t rxData = sdPinsDecode(raw);
     if (g_receiveCallback) g_receiveCallback(rxData, g_receiveUserData);
@@ -194,7 +181,12 @@ static void pioIsr_done(const void* arg)
 static void pioIsr_tx(const void* arg)
 {
     (void)arg;
-    struct NextTransmit txValue =
+    if (g_lentIrq1)
+    {
+        g_lentIrq1();
+        return;
+    }
+    struct LegacyTransmit txValue =
     {
         0xDEAD,
         50000
@@ -220,7 +212,7 @@ static void pioIsr_tx(const void* arg)
 // Interface
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setTransmitCallback(TransmitHandler cb, void* userData)
+void link_setLegacyTransmitCallback(LegacyTransmitHandler cb, void* userData)
 {
     g_transmitUserData = userData;
     g_transmitCallback = cb;
@@ -228,7 +220,7 @@ void link_setTransmitCallback(TransmitHandler cb, void* userData)
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setReceiveCallback(ReceiveHandler cb, void* userData)
+void link_setLegacyReceiveCallback(LegacyReceiveHandler cb, void* userData)
 {
     g_receiveUserData = userData;
     g_receiveCallback = cb;
@@ -236,7 +228,7 @@ void link_setReceiveCallback(ReceiveHandler cb, void* userData)
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_setTransiveDoneCallback(TransiveDoneHandler cb, void* user_data)
+void link_setLegacyTransiveDoneCallback(LegacyTransiveDoneHandler cb, void* user_data)
 {
     g_transiveDoneUserdata = user_data;
     g_transiveDoneCallback = cb;
@@ -254,6 +246,15 @@ enum LinkMode link_getMode()
 void link_startTransive() {}
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+/* Takes a lent state machine back, once it has stopped. */
+static void reclaimStateMachine(void)
+{
+    if (g_lentRevoke) g_lentRevoke();
+    g_lentIrq0 = NULL;
+    g_lentIrq1 = NULL;
+    g_lentRevoke = NULL;
+}
 
 static pio_sm_config linkSmConfig(uint32_t offset, uint32_t wrapTarget, uint32_t wrap)
 {
@@ -284,9 +285,9 @@ static void link_configureMaster()
 {
     g_mode = MASTER;
     g_rx_words = 0;
-    g_sdSeen = 0;
     g_sdTxMask = 0;
     pio_sm_set_enabled(g_pio, g_sm, false);
+    reclaimStateMachine();
     pio_clear_instruction_memory(g_pio);
     pio_sm_restart(g_pio, g_sm);
     pio_sm_clear_fifos(g_pio, g_sm);
@@ -331,8 +332,8 @@ static void configureSlavePio(bool driveSo)
 {
     g_mode = SLAVE;
     g_rx_words = 0;
-    g_sdSeen = 0;
     pio_sm_set_enabled(g_pio, g_sm, false);
+    reclaimStateMachine();
     pio_clear_instruction_memory(g_pio);
     pio_sm_restart(g_pio, g_sm);
     pio_sm_clear_fifos(g_pio, g_sm);
@@ -369,6 +370,7 @@ static void link_disablePio(void)
     g_mode = DISABLED;
     g_rx_words = 0;
     pio_sm_set_enabled(g_pio, g_sm, false);
+    reclaimStateMachine();
     pio_clear_instruction_memory(g_pio);
 }
 
@@ -431,6 +433,15 @@ void link_changeMode(enum LinkMode mode)
     }
 }
 
+uint32_t link_lendStateMachine(LinkIrqHandler irq0, LinkIrqHandler irq1, LinkIrqHandler revoke)
+{
+    link_disablePio();
+    g_lentIrq0 = irq0;
+    g_lentIrq1 = irq1;
+    g_lentRevoke = revoke;
+    return g_sm;
+}
+
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 static int link_init()
@@ -450,6 +461,7 @@ static int link_init()
 
     pio_set_irq0_source_enabled(g_pio, pis_interrupt0, true);
     pio_set_irq1_source_enabled(g_pio, pis_interrupt1, true);
+    pio_set_irq1_source_enabled(g_pio, pis_interrupt2, true);
 
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 

@@ -1,6 +1,9 @@
 #include "readyExitStandbyCommand.hpp"
 #include "../link_defines.h"
 
+namespace legacy
+{
+
 static uint8_t index = 0;
 
 uint16_t readyExitStandbyCommandTransive()
@@ -29,4 +32,6 @@ TransiveStruct readyExitStandbyCommand()
     };
 
     return transive;
+}
+
 }

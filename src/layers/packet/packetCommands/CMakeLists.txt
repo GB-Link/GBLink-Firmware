@@ -1,0 +1,2 @@
+zephyr_library_sources(emptyCommand.cpp)
+zephyr_library_sources(usbLinkCommand.cpp)

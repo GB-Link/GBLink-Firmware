@@ -3,4 +3,9 @@
 
 #pragma once
 
+namespace legacy
+{
+
 TransiveStruct sendLinkTypeCommand(uint16_t linkType);
+
+}

@@ -6,6 +6,9 @@
 #define MAX_CHUNK 14
 #define BLOCK_SIZE_INDEX 1
 
+namespace legacy
+{
+
 static const void* g_src;
 static uint16_t g_srcSize;
 static uint16_t g_pos;
@@ -94,4 +97,6 @@ TransiveStruct blockCommand()
     };
 
     return transive;
+}
+
 }

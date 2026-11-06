@@ -27,16 +27,16 @@ RawRelaySection::RawRelaySection()
     k_msgq_purge(&g_rawRelayTxQueue);
     k_msgq_purge(&g_rawRelayRxQueue);
 
-    link_setTransmitCallback(&transmitCallback, this);
-    link_setReceiveCallback(&receiveCallback, this);
-    link_setTransiveDoneCallback(&transiveDoneCallback, this);
+    link_setLegacyTransmitCallback(&transmitCallback, this);
+    link_setLegacyReceiveCallback(&receiveCallback, this);
+    link_setLegacyTransiveDoneCallback(&transiveDoneCallback, this);
 }
 
 RawRelaySection::~RawRelaySection()
 {
-    link_setTransmitCallback(nullptr, nullptr);
-    link_setReceiveCallback(nullptr, nullptr);
-    link_setTransiveDoneCallback(nullptr, nullptr);
+    link_setLegacyTransmitCallback(nullptr, nullptr);
+    link_setLegacyReceiveCallback(nullptr, nullptr);
+    link_setLegacyTransiveDoneCallback(nullptr, nullptr);
 }
 
 void RawRelaySection::process()
@@ -84,7 +84,7 @@ void RawRelaySection::flushRxBuffer()
     m_rxPacketIndex = 0;
 }
 
-struct NextTransmit RawRelaySection::transmitCallback(void* userData)
+struct LegacyTransmit RawRelaySection::transmitCallback(void* userData)
 {
     RawRelaySection* self = static_cast<RawRelaySection*>(userData);
 

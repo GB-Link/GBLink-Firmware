@@ -1,6 +1,6 @@
 #include "link.hpp"
 #include "../linkStatus.hpp"
-#include "../callbacks/commands.hpp"
+#include "../layers/packet/packetCommands/commands.hpp"
 
 #include "syscalls/kernel.h"
 #include "zephyr/kernel.h"
@@ -10,14 +10,14 @@
 void LinkModule::execute()
 {
     m_cancel = false;
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     bool keepAlive = true;
 
     while (keepAlive && !m_cancel)
     {
         {
-            UsbSection section(m_packetLayerMode);
+            UsbSection section(m_seatNumber, m_playerCount);
             m_currentSection = &section;
             keepAlive = section.process();
         }
@@ -35,12 +35,11 @@ void LinkModule::receiveCommand(std::span<const uint8_t> command)
 {
     switch (static_cast<LinkModeCommand>(command[0]))
     {
-        case LinkModeCommand::SetModeMaster:
-            m_packetLayerMode = PacketLayer::Mode::master;
-            k_sem_give(&m_waitForLinkModeCommand);
-            break;
-        case LinkModeCommand::SetModeSlave:
-            m_packetLayerMode = PacketLayer::Mode::slave;
+        case LinkModeCommand::SetPlayerSettings:
+            // [0x10, player count 2-4, seat]; anything else would index past the per-player tables.
+            if (command.size() < 3 || command[1] < 2 || command[1] > 4 || command[2] >= command[1]) return;
+            m_playerCount = command[1];
+            m_seatNumber = command[2];
             k_sem_give(&m_waitForLinkModeCommand);            
             break;
         case LinkModeCommand::StartHandshake: return m_currentSection->startHandshake();

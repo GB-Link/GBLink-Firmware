@@ -1,7 +1,8 @@
 #include "layers/usbLayer.hpp"
 #include "layers/serialLayer.hpp"
 #include "layers/transport.hpp"
-#include "layers/packetLayer.hpp"
+#include "layers/packet/packetLayer.hpp"
+#include "layers/link/linkLayer.hpp"
 #include "module/link.hpp"
 #include "module/emu.hpp"
 #include "module/gb.hpp"
@@ -13,7 +14,7 @@
 #include "sections/battleChipGateSection.hpp"
 #include "sections/rfuProtocolSection.hpp"
 #include "linkStatus.hpp"
-#include "callbacks/commands.hpp"
+#include "layers/packet/packetCommands/commands.hpp"
 #include "payloads/pokemon.hpp"
 #include "module/moduleInterface.hpp"
 #include "hardware.hpp"
@@ -50,9 +51,6 @@ public:
         Transport::registerCommandHandler(receiveCommandHandler, this);
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
-
-        // Persisted cable selection, reported by GetCableType until SD traffic is seen.
-        link_setCableOverride(getCableSelection());
     }
 
     void executeMode()
@@ -63,6 +61,7 @@ public:
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
         const uint8_t modeVariant = m_modeVariant;
+        if (mode != Mode::gbaLink) link_forgetSdPin();
         sendLinkStatus(LinkStatus::DeviceReady);
 
         switch (mode)
@@ -222,9 +221,6 @@ private:
         SetModeLedColor = 0x46,
         ResetLedColors = 0x47,
         Reboot = 0x48,
-        SetCableOverride = 0x49,
-        GetCableType = 0x4a,
-        SetCableSelection = 0x4b,
         GetRfuIsrStats = 0x4c,
     };
 
@@ -306,13 +302,6 @@ private:
                 // Warm-reboot into the app so persisted settings apply now; no return.
                 Hardware::getInstance().reboot();
                 break;
-            case HardwareCommand::SetCableOverride:
-                // [0x49, CABLE_*] — session cable selection. Accepted for older clients;
-                // SD is read on both pins whatever the selection.
-                if (data.size() >= 2) {
-                    link_setCableOverride(data[1]);
-                }
-                break;
             case HardwareCommand::GetRfuIsrStats:
             {
                 // Transfer-path timing: whether replies are staged inside the
@@ -327,22 +316,6 @@ private:
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
-            case HardwareCommand::GetCableType:
-            {
-                // Report-only: the pin SD arrived on in this session, or the
-                // cable selection before any word has been received.
-                uint8_t resp[2] = { 0x4a, link_getDetectedCableType() };
-                Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
-                break;
-            }
-            case HardwareCommand::SetCableSelection:
-                // [0x4b, CABLE_*] — persist the cable selection. Kept for older
-                // clients; the SD pin does not depend on it.
-                if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
-                    setCableSelection(data[1]);
-                    link_setCableOverride(data[1]);
-                }
-                break;
             default: break;
         }
     }
@@ -391,9 +364,7 @@ private:
             fw::versionPatch,
             // Byte 4: WebUSB landing-page enabled (1) / disabled (0). Older web
             // apps simply ignore the extra byte.
-            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0),
-            // Byte 5: persisted cable selection (CABLE_*).
-            getCableSelection()
+            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0)
         };
         Transport::sendData(std::span<const uint8_t>(info, sizeof(info)));
     }

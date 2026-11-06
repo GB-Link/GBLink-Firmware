@@ -1,6 +1,6 @@
 #include <span>
 
-#include "../layers/packetLayer.hpp"
+#include "../layers/legacyPacketLayer.hpp"
 #include "../payloads/pokemon.hpp"
 #include "../payloads/mail.hpp"
 
@@ -22,7 +22,7 @@ class TradeConnection : public Section
     {
         using SetupCallback = void(*)(void);
 
-        TransiveStruct transive;
+        legacy::TransiveStruct transive;
         SetupCallback setupCb;
     };
 

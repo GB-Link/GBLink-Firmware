@@ -7,6 +7,8 @@ extern "C"
 #include "../callbacks/commands.hpp"
 #include <algorithm>
 
+using namespace legacy;
+
 NextSection TradeLounge::process()
 {
     connectAsMaster();
