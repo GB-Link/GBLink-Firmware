@@ -1,0 +1,53 @@
+.program pio_master_mode
+
+; set pins:  SD_GBC | SD_GBA | SO | SI | SC   (5 pins from SC)
+; out/in:    SD_GBC | SD_GBA                  (2 pins from SD_GBA, GP3 = bit 0)
+; Both SD pins are always switched together. The CPU keeps the output of the SD pin
+; that is not in use disabled (GPIO OEOVER), so only the learned pin ever drives.
+
+.define PREP_NEXT_TRANSMISSION_FLAG 0
+.define RX_TX_DONE_FLAG 1
+
+; The state machine starts here, so the first DONE comes with an empty RX FIFO.
+done:
+    irq RX_TX_DONE_FLAG [31]                ; CPU: read RX, put gap | window << 16
+    pull [2]
+    set pins, 0b11101                       ; SC high: end of the transfer
+    set pindirs, 0b00101                    ; SC and SO output, both SD pins input until the next transfer
+    out x, 16                               ; gap
+gap:
+    jmp x-- gap
+    irq PREP_NEXT_TRANSMISSION_FLAG         ; CPU: put seat - 1 and the tx words before the window ends
+    mov x, osr                              ; window
+window:
+    jmp x-- window
+    pull                                    ; seat - 1: slot 0 is always ours
+    mov y, osr
+    set pindirs, 0b11101                    ; SD output
+    set pins, 0b11100 [4]                   ; SC low: transfer start
+transmit:
+    mov x, status
+    jmp x-- done                            ; no words left
+    pull noblock
+    set pins, 0b00100 [15]                  ; start bit
+transmit_bit:
+    out pins, 2 [14]
+    jmp !osre transmit_bit
+.wrap_target
+slot:
+    set pins, 0b11100 [16]                  ; stop bit after our word, SO high after the GBA's
+    jmp y-- transmit
+    set pindirs, 0b00101                    ; release SD for the GBA
+    set pins, 0b11000                       ; SO low: the GBA sends now
+    mov isr, ~null
+poll:
+    in pins, 2                              ; ISR stays all ones while both pins are high
+    mov x, ~isr
+    jmp !x poll
+    set x, 15 [19]                          ; first sample in the middle of bit 0
+receive_bit:
+    in pins, 2 [14]
+    jmp x-- receive_bit
+    push [16]
+    set pindirs, 0b11101 [14]               ; SD output again
+.wrap

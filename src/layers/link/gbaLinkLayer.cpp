@@ -18,6 +18,9 @@ extern "C"
 #define RX_TX_DONE_FLAG 1
 #define START_WATCHDOG 2
 
+#define SD_PIN_GP3 0x1u
+#define SD_PIN_GP4 0x2u
+
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 struct LinkPio
@@ -45,19 +48,20 @@ static struct LinkPio g_pio = { .device = NULL, .id = 0};
 
 static pio_sm_config g_config = {};
 
-static enum CableType g_configuredCable;
-
-static enum CableType g_selectedCable = GBC;
-
 static uint32_t g_wordCount = 0;
 
 uint16_t g_lastTxValue = 0x00;
 
 static struct NextTransmit g_nextTransmission = {};
 
+static constexpr uint32_t prepWindowCycles = 304;
+
 // releases the pio from waiting on a start bit that never comes, e.g. no GBA connected
 static struct k_timer g_rxWatchdog;
 static constexpr k_timeout_t rxWatchdogTimeout = K_MSEC(1);
+
+static uint8_t g_sdPin = 0;
+static uint8_t g_sdCandidate = 0;
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -72,35 +76,85 @@ uint32_t SD_GBC_pin = DT_RPI_PICO_PIO_PIN_BY_NAME(DT_CHILD(DT_NODELABEL(pio0), p
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-static void configureGBA();
-
-static void configureGBC();
-
 void assignGpioToPio();
-
-static uint16_t reverse16Bit(uint16_t x);
 
 void link_disable();
 
 void link_enable();
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-// IRQ
+// SD Pin Helpers
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-static void pioIsr_prepareTransmission()
+static inline uint32_t sdPinsSpread(uint16_t value)
 {
-    if (g_transmitCallback) g_nextTransmission = g_transmitCallback(g_transmitUserData);
-    pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.seatNumber);
-    for (uint16_t value : g_nextTransmission.txValues)
-    {
-        pio_sm_put(g_pio.device, g_pio.id, value);
-    }
-    
-    pio_interrupt_clear(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG);
+    uint32_t x = value;
+    x = (x | (x << 8)) & 0x00FF00FFu;
+    x = (x | (x << 4)) & 0x0F0F0F0Fu;
+    x = (x | (x << 2)) & 0x33333333u;
+    x = (x | (x << 1)) & 0x55555555u;
+    return x | (x << 1);
 }
 
-static void pioIsr_startWatchdog()
+
+static inline uint16_t sdPinsDecode(uint32_t raw)
+{
+    uint32_t x = raw & (raw >> 1) & 0x55555555u;
+    x = (x | (x >> 1)) & 0x33333333u;
+    x = (x | (x >> 2)) & 0x0F0F0F0Fu;
+    x = (x | (x >> 4)) & 0x00FF00FFu;
+    x = (x | (x >> 8)) & 0x0000FFFFu;
+    x = ((x & 0x5555u) << 1) | ((x & 0xAAAAu) >> 1);
+    x = ((x & 0x3333u) << 2) | ((x & 0xCCCCu) >> 2);
+    x = ((x & 0x0F0Fu) << 4) | ((x & 0xF0F0u) >> 4);
+    x = ((x & 0x00FFu) << 8) | ((x & 0xFF00u) >> 8);
+    return (uint16_t)x;
+}
+
+static inline uint8_t sdPinsFramePin(uint32_t raw)
+{
+    const uint32_t low = ~raw;
+    const int gp3 = (low & 0x55555555u) != 0;
+    const int gp4 = (low & 0xAAAAAAAAu) != 0;
+    if (gp3 == gp4) return 0;
+    return gp3 ? SD_PIN_GP3 : SD_PIN_GP4;
+}
+
+static void setSdPin(uint8_t pin)
+{
+    g_sdPin = pin;
+    gpio_set_oeover(SD_GBA_pin, (pin & SD_PIN_GP3) ? GPIO_OVERRIDE_NORMAL : GPIO_OVERRIDE_LOW);
+    gpio_set_oeover(SD_GBC_pin, (pin & SD_PIN_GP4) ? GPIO_OVERRIDE_NORMAL : GPIO_OVERRIDE_LOW);
+}
+
+static void learnSdPin(uint32_t raw)
+{
+    const uint8_t pin = sdPinsFramePin(raw);
+    if (pin == 0) return;
+
+    if (pin == g_sdPin)
+    {
+        g_sdCandidate = 0;
+        return;
+    }
+
+    if (pin == g_sdCandidate)
+    {
+        setSdPin(pin);
+        g_sdCandidate = 0;
+    }
+    else
+    {
+        setSdPin(0);
+        g_sdCandidate = pin;
+    }
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// IRQ Watchdog
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+static void startRxWatchdog()
 {
     k_timer_start(&g_rxWatchdog, rxWatchdogTimeout, K_NO_WAIT);
     pio_interrupt_clear(g_pio.device, START_WATCHDOG);
@@ -110,24 +164,54 @@ static void rxWatchdogExpired(struct k_timer* timer)
 {
     (void)timer;
 
-    const uint32_t currentInstruction = g_pio.device->sm[g_pio.id].instr;
-    const bool isWait = (currentInstruction & 0xE000) == 0x2000;
-    if (!isWait) return;
+    const uint32_t instruction = g_pio.device->sm[g_pio.id].instr;
 
-    const uint32_t pc = pio_sm_get_pc(g_pio.device, g_pio.id);
-    pio_sm_exec(g_pio.device, g_pio.id, pio_encode_jmp(pc + 1));
+    // Master: polls both SD pins (`in pins, 2` / `mov x, ~isr` / `jmp !x`) while the ISR is all ones.
+    // Clearing the ISR ends the poll at its next check; the receive then samples the idle line, 0xFFFF.
+    const bool isPoll = instruction == pio_encode_in(pio_pins, 2)
+                     || instruction == pio_encode_mov_not(pio_x, pio_isr)
+                     || (instruction & 0xE0E0) == pio_encode_jmp_not_x(0);
+    if (isPoll) pio_sm_exec(g_pio.device, g_pio.id, pio_encode_mov(pio_isr, pio_null));
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// IRQ
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+static void pioIsr_prepareTransmission()
+{
+    startRxWatchdog();
+    if (g_transmitCallback) g_nextTransmission = g_transmitCallback(g_transmitUserData);
+
+    // pio makes use of the fact that in master 0 is alwyas our seat
+    pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.seatNumber - 1u);
+    for (uint16_t value : g_nextTransmission.txValues)
+    {
+        pio_sm_put(g_pio.device, g_pio.id, sdPinsSpread(value));
+    }
+    
+    pio_interrupt_clear(g_pio.device, PREP_NEXT_TRANSMISSION_FLAG);
 }
 
 static void pioIsr_done()
 {
+    pio_interrupt_clear(g_pio.device, RX_TX_DONE_FLAG);
+
     k_timer_stop(&g_rxWatchdog);
+
+    // Gap and PREP window as two 16-bit counts. Slaves discard this word.
+    const uint32_t gap = g_nextTransmission.timingUs > 0xFFFFu ? 0xFFFFu : g_nextTransmission.timingUs;
+    pio_sm_put(g_pio.device, g_pio.id, gap | (prepWindowCycles << 16));
+
+    // The master starts at its DONE step, so its first DONE has no word to read.
+    if (pio_sm_is_rx_fifo_empty(g_pio.device, g_pio.id)) return;
+    
+    const uint32_t raw = pio_sm_get(g_pio.device, g_pio.id);
+    learnSdPin(raw);
     g_wordCount++;
-    pio_sm_put(g_pio.device, g_pio.id, g_nextTransmission.timingUs);
-    uint16_t rxData = pio_sm_get(g_pio.device, g_pio.id);
-    rxData = reverse16Bit(rxData);
+    const uint16_t rxData = sdPinsDecode(raw);
     if (g_receiveCallback) g_receiveCallback(rxData, g_receiveUserData);
     if (g_transiveDoneCallback) g_transiveDoneCallback(rxData, g_nextTransmission.txValues, g_transiveDoneUserdata);
-    pio_interrupt_clear(g_pio.device, RX_TX_DONE_FLAG);
 }
 
 static void pioIsr(const void* arg)
@@ -143,11 +227,6 @@ static void pioIsr(const void* arg)
     {
         pioIsr_done();
     }
-
-    if (pio_interrupt_get(g_pio.device, START_WATCHDOG))
-    {
-        pioIsr_startWatchdog();
-    } 
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -207,6 +286,14 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     uint32_t offset = pio_add_program(g_pio.device, prgramm);
     sm_config_set_wrap(&g_config, offset + wrapTarget, offset + warp);
     assignGpioToPio();
+
+    g_sdCandidate = 0;
+    setSdPin(0);
+
+    sm_config_set_set_pins(&g_config, SC_pin, 5);
+    sm_config_set_out_pins(&g_config, SD_GBA_pin, 2);
+    sm_config_set_in_pins(&g_config, SD_GBA_pin);
+
     pio_sm_init(g_pio.device, g_pio.id, offset, &g_config);
 }
 
@@ -219,7 +306,6 @@ uint32_t link_getPin(enum LinkPin pin)
         case SC: return SC_pin;
         case SI: return SI_pin;
         case SO: return SO_pin;
-        case SD: return g_configuredCable == GBA ? SD_GBA_pin : SD_GBC_pin;
         case SD_GBA: return SD_GBA_pin;
         case SD_GBC: return SD_GBC_pin;
       break;
@@ -238,23 +324,6 @@ void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction)
     bool isOut = (direction == PIN_DOR_OUT);
     pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, isOut);
 }
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
-void link_configureCableType(enum CableType type)
-{
-    switch(type)
-    {
-        case GBA: configureGBA(); break;
-        case GBC: configureGBC(); break;
-    }
-}
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
-void link_selectCableType(enum CableType type) { g_selectedCable = type; }
-
-enum CableType link_getSelectedCableType() { return g_selectedCable; }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -281,36 +350,6 @@ void assignGpioToPio()
     pio_gpio_init(g_pio.device, SD_GBC_pin);
 }
 
-uint16_t reverse16Bit(uint16_t x)
-{
-	x = ((x & 0x5555) << 1) | ((x & 0xAAAA) >> 1);
-	x = ((x & 0x3333) << 2) | ((x & 0xCCCC) >> 2);
-	x = ((x & 0x0F0F) << 4) | ((x & 0xF0F0) >> 4);
-	return (x << 8) | (x >> 8);
-}
-
-static void configureGBA()
-{
-    g_configuredCable = GBA;
-    sm_config_set_set_pins(&g_config, SC_pin, 4);
-    sm_config_set_out_pins(&g_config, SD_GBA_pin, 1);
-    sm_config_set_in_pins(&g_config, SD_GBA_pin);
-    sm_config_set_jmp_pin(&g_config, SD_GBA_pin);
-
-    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
-}
-
-static void configureGBC()
-{
-    g_configuredCable = GBC;
-    sm_config_set_set_pins(&g_config, SC_pin, 5);
-    sm_config_set_out_pins(&g_config, SD_GBC_pin, 1);
-    sm_config_set_in_pins(&g_config, SD_GBC_pin);
-    sm_config_set_jmp_pin(&g_config, SD_GBC_pin);
-
-    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
-}
-
 static int init()
 {
     const struct device* dev = DEVICE_DT_GET(DT_PROP(DT_NODELABEL(pio_link), pio));
@@ -329,21 +368,18 @@ static int init()
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt0, true);
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt1, true);
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt2, true);
-
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 
     link_disable();
 
     assignGpioToPio();
-    
-    configureGBC();
 
-    gpio_pull_up(link_getPin(SD));
+    gpio_pull_up(link_getPin(SD_GBA));
 
     g_config = pio_get_default_sm_config();
 
-    sm_config_set_out_shift(&g_config, true, false, 16);
-    sm_config_set_in_shift(&g_config, false, false, 16);
+    sm_config_set_out_shift(&g_config, true, false, 32);
+    sm_config_set_in_shift(&g_config, false, false, 32);
     sm_config_set_mov_status(&g_config, STATUS_TX_LESSTHAN, 1);
 
     sm_config_set_clkdiv(&g_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200

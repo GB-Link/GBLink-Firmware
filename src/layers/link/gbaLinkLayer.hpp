@@ -30,7 +30,6 @@ enum LinkPin
     SC,
     SI,
     SO,
-    SD,
     SD_GBA,
     SD_GBC
 };
@@ -62,13 +61,6 @@ void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction);
 uint32_t link_getPin(enum LinkPin pin);
 
 void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t wrapTarget);
-
-void link_configureCableType(enum CableType type);
-
-/** Cable the modes should configure for; set from the persisted selection. */
-void link_selectCableType(enum CableType type);
-
-enum CableType link_getSelectedCableType();
 
 uint32_t link_receivedWordCount();
 

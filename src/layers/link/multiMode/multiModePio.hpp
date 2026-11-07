@@ -11,6 +11,46 @@
 #define PIO_SD_GBA      8   /* bit 3 — GBA cable, SD on GP3, set_count=4 */
 #define PIO_SD_GBC      16  /* bit 4 — GBC cable, SD on GP4, set_count=5 */
 
+/* --- Both cables (SD on GP3 and GP4), from pio_firmware/combined/pio_master_multi_mode.pio --- */
+
+/* Switches both SD pins together: the CPU must keep the output of the unused one disabled (GPIO OEOVER). */
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_master, 19, 31,
+    0xdf01, //  0: irq    nowait 1               [31]
+    0x82a0, //  1: pull   block                  [2]
+    0xe01d, //  2: set    pins, 29
+    0xe085, //  3: set    pindirs, 5
+    0x6030, //  4: out    x, 16
+    0x0045, //  5: jmp    x--, 5
+    0xc000, //  6: irq    nowait 0
+    0xa027, //  7: mov    x, osr
+    0x0048, //  8: jmp    x--, 8
+    0x80a0, //  9: pull   block
+    0xa047, // 10: mov    y, osr
+    0xe09d, // 11: set    pindirs, 29
+    0xe41c, // 12: set    pins, 28               [4]
+    0xa025, // 13: mov    x, status
+    0x0040, // 14: jmp    x--, 0
+    0x8080, // 15: pull   noblock
+    0xef04, // 16: set    pins, 4                [15]
+    0x6e02, // 17: out    pins, 2                [14]
+    0x00f1, // 18: jmp    !osre, 17
+            //     .wrap_target
+    0xf01c, // 19: set    pins, 28               [16]
+    0x008d, // 20: jmp    y--, 13
+    0xe085, // 21: set    pindirs, 5
+    0xe018, // 22: set    pins, 24
+    0xa0cb, // 23: mov    isr, !null
+    0x4002, // 24: in     pins, 2
+    0xa02e, // 25: mov    x, !isr
+    0x0038, // 26: jmp    !x, 24
+    0xf32f, // 27: set    x, 15                  [19]
+    0x4e02, // 28: in     pins, 2                [14]
+    0x005c, // 29: jmp    x--, 28
+    0x9020, // 30: push   block                  [16]
+    0xee9d, // 31: set    pindirs, 29            [14]
+            //     .wrap
+);
+
 /* --- GBA cable programs (SD on GP3) --- */
 
 RPI_PICO_PIO_DEFINE_PROGRAM(pio_master_gba, 0, 31,

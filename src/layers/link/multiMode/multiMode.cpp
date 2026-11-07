@@ -34,26 +34,11 @@ void multiMode_selectMode(enum MultiMode mode)
 static void configureMaster()
 {
     link_disable();
-
-    enum CableType cableType = link_getSelectedCableType();
-    link_configureCableType(cableType);
-    switch (cableType)
-    {
-        case GBC:
-            link_configureProgram(
-                RPI_PICO_PIO_GET_PROGRAM(pio_master_gbc), 
-                RPI_PICO_PIO_GET_WRAP(pio_master_gbc), 
-                RPI_PICO_PIO_GET_WRAP_TARGET(pio_master_gbc)
-            );
-            break;
-            
-        case GBA:
-            link_configureProgram(
-                RPI_PICO_PIO_GET_PROGRAM(pio_master_gba), 
-                RPI_PICO_PIO_GET_WRAP(pio_master_gba), 
-                RPI_PICO_PIO_GET_WRAP_TARGET(pio_master_gba)
-            );
-    }
+    link_configureProgram(
+        RPI_PICO_PIO_GET_PROGRAM(pio_master), 
+        RPI_PICO_PIO_GET_WRAP(pio_master), 
+        RPI_PICO_PIO_GET_WRAP_TARGET(pio_master)
+    );
     
 	link_enable();
 }
@@ -64,26 +49,7 @@ static void configureSlave(void)
 {
     link_disable();
 
-    enum CableType cableType = link_getSelectedCableType();
-    link_configureCableType(cableType);
-
-    switch (cableType)
-    {
-        case GBC:
-            link_configureProgram(
-                RPI_PICO_PIO_GET_PROGRAM(pio_slave_gbc), 
-                RPI_PICO_PIO_GET_WRAP(pio_slave_gbc), 
-                RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gbc)
-            );
-            break;
-
-        case GBA:
-            link_configureProgram(
-                RPI_PICO_PIO_GET_PROGRAM(pio_slave_gba), 
-                RPI_PICO_PIO_GET_WRAP(pio_slave_gba), 
-                RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_gba)
-            );
-    }
+    // add slave prgramm
     
 	link_enable();
 

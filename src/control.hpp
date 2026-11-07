@@ -45,15 +45,6 @@ public:
         Transport::registerCommandHandler(receiveCommandHandler, this);
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
-
-        // Persisted cable selection decides the SD pin for all GBA modes.
-        applyCableSelection(getCableSelection());
-    }
-
-    // No auto-detection: CABLE_AUTO (old settings / web apps) falls back to GBC.
-    static void applyCableSelection(uint8_t selection)
-    {
-        link_selectCableType(selection == CABLE_FORCE_GBA ? GBA : GBC);
     }
 
     void executeMode()
@@ -287,18 +278,10 @@ private:
                 break;
             case HardwareCommand::GetCableType:
             {
-                // Legacy: reports the selected cable (no detection anymore).
-                uint8_t resp[2] = { 0x4a, static_cast<uint8_t>(link_getSelectedCableType()) };
-                Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
             case HardwareCommand::SetCableSelection:
-                // [0x4b, CABLE_*] — persist the cable selection and apply it now.
-                if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
-                    setCableSelection(data[1]);
-                    applyCableSelection(data[1]);
-                    bcgProto_requestRearm();
-                }
+                
                 break;
             default: break;
         }

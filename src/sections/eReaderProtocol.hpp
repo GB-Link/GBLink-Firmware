@@ -273,16 +273,14 @@ struct EReaderProxy
         emitWire(WIRE_FLAG_SESSION, 0, 0);
     }
 
-    // scToggled: SC clock activity observed since the previous beacon. SC is
-    // the same pin for both cable types, so "SC toggling but zero words
-    // received" points at the wrong cable selection.
+    // scToggled: SC clock activity observed since the previous beacon.
+    // The rx field used to carry the selected cable type and is now always 0.
     void emitWireNoTraffic(bool scToggled)
     {
         const uint8_t pins =
             (link_readPartnerPins() & static_cast<uint8_t>(~0x01))
             | (scToggled ? 0x01 : 0x00);
-        emitWire(WIRE_FLAG_NO_TRAFFIC, link_getSelectedCableType(),
-                 static_cast<uint16_t>(pins));
+        emitWire(WIRE_FLAG_NO_TRAFFIC, 0, static_cast<uint16_t>(pins));
     }
 
     void noteWireRound(uint16_t rx, const uint16_t tx)
