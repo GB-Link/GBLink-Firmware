@@ -3,73 +3,41 @@
 
 #pragma once
 
-/* SET-instruction pin values.
- *   bit 0 = SC  (GP0)       bit 1 = SI  (GP1, always input)
- *   bit 2 = SO  (GP2)       bit 3/4 = SD (GP3 or GP4)       */
-#define PIO_SC          1   /* bit 0 */
-#define PIO_SO          4   /* bit 2 */
-#define PIO_SD_GBA      8   /* bit 3 — GBA cable, SD on GP3, set_count=4 */
-#define PIO_SD_GBC      16  /* bit 4 — GBC cable, SD on GP4, set_count=5 */
-
-/* --- GBA cable programs (SD on GP3) --- */
-
-/* e-reader child: SO stays on GPIO LOW — no PIO_SO in set ops. */
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_ereader_gba, 0, 23,
+/* From pio_firmware/combined/pio_slave_ereader.pio: the multi-mode slave, but SO stays input.
+ * The CPU holds SO low on the GPIO, so it stays low across program reloads. */
+RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_ereader, 0, 31,
             //     .wrap_target
-    0xe008, //  0: set    pins, 8                    
-    0xe080, //  1: set    pindirs, 0                 
-    0xe02f, //  2: set    x, 15                      
-    0x2020, //  3: wait   0 pin, 0                   
-    0xd700, //  4: irq    nowait 0               [23]
-    0x4e01, //  5: in     pins, 1                [14]
-    0x0045, //  6: jmp    x--, 5                     
-    0x8020, //  7: push   block                      
-    0x80a0, //  8: pull   block                      
-    0xe008, //  9: set    pins, 8                    
-    0xe088, // 10: set    pindirs, 8                 
-    0xbf42, // 11: nop                           [31]
-    0xe02f, // 12: set    x, 15                      
-    0x80a0, // 13: pull   block                      
-    0xf000, // 14: set    pins, 0                [16]
-    0x6e01, // 15: out    pins, 1                [14]
-    0x004f, // 16: jmp    x--, 15                    
-    0xf008, // 17: set    pins, 8                [16]
-    0xbf42, // 18: nop                           [31]
-    0xa025, // 19: mov    x, status                  
-    0x002c, // 20: jmp    !x, 12                     
-    0xdf01, // 21: irq    nowait 1               [31]
-    0xbf42, // 22: nop                           [31]
-    0x80a0, // 23: pull   block                      
+    0xe018, //  0: set    pins, 24
+    0xe080, //  1: set    pindirs, 0
+    0xe02f, //  2: set    x, 15
+    0xa0cb, //  3: mov    isr, !null
+    0x4002, //  4: in     pins, 2
+    0xa04e, //  5: mov    y, !isr
+    0x0083, //  6: jmp    y--, 3
+    0x4002, //  7: in     pins, 2
+    0xa04e, //  8: mov    y, !isr
+    0x0067, //  9: jmp    !y, 7
+    0xd400, // 10: irq    nowait 0               [20]
+    0x4e02, // 11: in     pins, 2                [14]
+    0x004b, // 12: jmp    x--, 11
+    0x8020, // 13: push   block
+    0xa0cb, // 14: mov    isr, !null
+    0x4002, // 15: in     pins, 2
+    0xa02e, // 16: mov    x, !isr
+    0x0033, // 17: jmp    !x, 19
+    0xa043, // 18: mov    y, null
+    0x80a0, // 19: pull   block
+    0xa0e2, // 20: mov    osr, y
+    0x7b82, // 21: out    pindirs, 2             [27]
+    0xa025, // 22: mov    x, status
+    0x005e, // 23: jmp    x--, 30
+    0x8080, // 24: pull   noblock
+    0xef00, // 25: set    pins, 0                [15]
+    0x6e02, // 26: out    pins, 2                [14]
+    0x00fa, // 27: jmp    !osre, 26
+    0xf118, // 28: set    pins, 24               [17]
+    0x1f16, // 29: jmp    22                     [31]
+    0xdf01, // 30: irq    nowait 1               [31]
+    0x80a0, // 31: pull   block
             //     .wrap
 );
-
-RPI_PICO_PIO_DEFINE_PROGRAM(pio_slave_ereader_gbc, 0, 23,
-    //     .wrap_target
-    0xe010, //  0: set    pins, 16                   
-    0xe080, //  1: set    pindirs, 0                 
-    0xe02f, //  2: set    x, 15                      
-    0x2020, //  3: wait   0 pin, 0                   
-    0xd700, //  4: irq    nowait 0               [23]
-    0x4e01, //  5: in     pins, 1                [14]
-    0x0045, //  6: jmp    x--, 5                     
-    0x8020, //  7: push   block                      
-    0x80a0, //  8: pull   block                      
-    0xe010, //  9: set    pins, 16                   
-    0xe090, // 10: set    pindirs, 16                
-    0xbf42, // 11: nop                           [31]
-    0xe02f, // 12: set    x, 15                      
-    0x80a0, // 13: pull   block                      
-    0xf000, // 14: set    pins, 0                [16]
-    0x6e01, // 15: out    pins, 1                [14]
-    0x004f, // 16: jmp    x--, 15                    
-    0xf010, // 17: set    pins, 16               [16]
-    0xbf42, // 18: nop                           [31]
-    0xa025, // 19: mov    x, status                  
-    0x002c, // 20: jmp    !x, 12                     
-    0xdf01, // 21: irq    nowait 1               [31]
-    0xbf42, // 22: nop                           [31]
-    0x80a0, // 23: pull   block                      
-            //     .wrap
-);
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

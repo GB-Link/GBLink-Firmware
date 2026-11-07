@@ -64,13 +64,16 @@ void ereader_configureEreaderSlave(void)
 static void configureEreaderSlavePio(void)
 {
     link_disable();
+    link_configureProgram(
+        RPI_PICO_PIO_GET_PROGRAM(pio_slave_ereader),
+        RPI_PICO_PIO_GET_WRAP(pio_slave_ereader),
+        RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_ereader)
+    );
 
+    // SO is held low on the GPIO, not by the PIO, so the GBA stays the parent.
     gpio_init(link_getPin(SO));
     gpio_set_dir(link_getPin(SO), GPIO_OUT);
     gpio_put(link_getPin(SO), 0);
-
-    link_setPioPinDirs(link_getPin(SC), PIN_DIR_IN);
-    link_setPioPinDirs(link_getPin(SI), PIN_DIR_IN);
 
     link_enable();
 }

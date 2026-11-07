@@ -287,6 +287,10 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     sm_config_set_wrap(&g_config, offset + wrapTarget, offset + warp);
     assignGpioToPio();
 
+    // The programs wait for both SD pins to be high, so the one without a cable must not float.
+    gpio_pull_up(SD_GBA_pin);
+    gpio_pull_up(SD_GBC_pin);
+
     g_sdCandidate = 0;
     setSdPin(0);
 
@@ -367,14 +371,11 @@ static int init()
 
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt0, true);
     pio_set_irq0_source_enabled(g_pio.device, pis_interrupt1, true);
-    pio_set_irq0_source_enabled(g_pio.device, pis_interrupt2, true);
     int ret = pinctrl_apply_state(config, PINCTRL_STATE_DEFAULT);
 
     link_disable();
 
     assignGpioToPio();
-
-    gpio_pull_up(link_getPin(SD_GBA));
 
     g_config = pio_get_default_sm_config();
 
@@ -383,8 +384,6 @@ static int init()
     sm_config_set_mov_status(&g_config, STATUS_TX_LESSTHAN, 1);
 
     sm_config_set_clkdiv(&g_config, 67.816f); // ~540 ns per inst, 16 inst equal baud 115200
-
-    pio_sm_init(g_pio.device, g_pio.id, 0, &g_config);
 
     return ret;
 }

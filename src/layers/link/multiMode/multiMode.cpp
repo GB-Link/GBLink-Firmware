@@ -48,12 +48,11 @@ static void configureMaster()
 static void configureSlave(void)
 {
     link_disable();
+    link_configureProgram(
+        RPI_PICO_PIO_GET_PROGRAM(pio_slave),
+        RPI_PICO_PIO_GET_WRAP(pio_slave),
+        RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave)
+    );
 
-    // add slave prgramm
-    
 	link_enable();
-
-    link_setPioPinDirs(link_getPin(SC), PIN_DIR_IN);
-    link_setPioPinDirs(link_getPin(SI), PIN_DIR_IN);
-    link_setPioPinDirs(link_getPin(SO), PIN_DOR_OUT);
 }
