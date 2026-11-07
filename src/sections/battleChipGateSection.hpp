@@ -22,4 +22,3 @@ private:
 };
 
 void bcgProto_receiveHandler(std::span<const uint8_t> data, void*);
-void bcgProto_requestRearm();

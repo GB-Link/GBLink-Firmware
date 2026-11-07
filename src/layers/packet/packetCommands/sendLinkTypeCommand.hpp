@@ -4,3 +4,4 @@
 #pragma once
 
 TransmitBehaviour sendLinkTypeCommand(uint16_t linkType);
+

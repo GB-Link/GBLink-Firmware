@@ -28,7 +28,7 @@ static volatile bool g_sessionActive = false;
 
 static struct NextTransmit transmitCallback(void*)
 {
-    return { g_proxy.stagedTx, g_proxy.stagedTiming };
+    return { 0, g_proxy.stagedTx, g_proxy.stagedTiming }; //FIXME
 }
 
 static void receiveCallback(uint16_t rx, void*)
@@ -89,8 +89,8 @@ AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum MultiMod
 
     ring_buf_reset(&g_awOutRing);
 
-    link_setTransmitCallback(&transmitCallback, nullptr);
-    link_setReceiveCallback(&receiveCallback, nullptr);
+    link_setTransmitCallback(&transmitCallback, this);
+    link_setReceiveCallback(&receiveCallback, this);
 
     g_sessionActive = true;
 }

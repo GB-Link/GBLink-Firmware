@@ -1,7 +1,7 @@
 #include "emptyCommand.hpp"
 #include "TransiveStruct.hpp"
 
-TxValues emptyCommandTransive(TransmitContext* ctx)
+static TxValues emptyCommandTransive(TransmitContext* ctx)
 {
     (void)ctx;
     TxValues txValues;

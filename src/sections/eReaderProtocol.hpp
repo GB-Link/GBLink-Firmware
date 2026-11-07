@@ -42,15 +42,19 @@ constexpr uint16_t sma4CardWords = sma4CardBytes / 2;
 
 enum class Profile : uint8_t
 {
-    sma4           = 1,
-    pokemonRuby    = 2,
-    sma4JPN        = 3,
-    pokemonRubyJPN = 4,
-    sma4EUR        = 5,
-    sma4EURFra     = 6,
-    sma4EURGer     = 7,
-    sma4EUREsp     = 8,
-    sma4EURIta     = 9,
+    sma4                = 1,
+    pokemonRuby         = 2,
+    sma4JPN             = 3,
+    pokemonRubyJPN      = 4,
+    sma4EUR             = 5,
+    sma4EURFra          = 6,
+    sma4EURGer          = 7,
+    sma4EUREsp          = 8,
+    sma4EURIta          = 9,
+    pokemonEmerald      = 10,
+    pokemonEmeraldJPN   = 11,
+    pokemonEmeraldFra   = 12,
+    pokemonEmeraldGer   = 13
 };
 
 inline bool isSma4Profile(Profile p)

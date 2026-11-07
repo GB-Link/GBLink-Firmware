@@ -1,6 +1,5 @@
 
 #include <memory>
-#include <array>
 #include "../../../common.hpp"
 
 #pragma once

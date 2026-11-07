@@ -6,4 +6,6 @@
 #include "./readyCloseLinkCommand.hpp"
 #include "./sendLinkTypeCommand.hpp"
 #include "./blockCommandRequestCommand.hpp"
+#include "./emptyCommand.hpp"
 #include "./usbLinkCommand.hpp"
+

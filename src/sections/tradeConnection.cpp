@@ -10,7 +10,6 @@ extern "C"
 }
 #include "../layers/packet/packetCommands/commands.hpp"
 
-
 void TradeConnection::handleInitialDataExchange()
 {
     connectAsMaster();

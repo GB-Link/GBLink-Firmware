@@ -8,7 +8,7 @@ struct BlockRequestContext : TransmitContext
 };
 
 
-TxValues blockRequestTransive(TransmitContext* ctx)
+static TxValues blockRequestTransive(TransmitContext* ctx)
 {
     auto* blockCtx = static_cast<BlockRequestContext*>(ctx);
     TxValues txValues;

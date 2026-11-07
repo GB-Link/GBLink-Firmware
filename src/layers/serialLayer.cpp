@@ -3,25 +3,63 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/init.h>
 
+volatile uint32_t SerialLayer::s_rxOverflows = 0;
+
+static uint8_t g_bridgeRxRing[4096];
+
+// Drain thread of the instance that buffers its receive path (the bridge UART).
+// Cooperative, so it is not starved by the link sections, which loop on the
+// main thread at priority 0 without yielding; below that, received frames would
+// wait until such a loop happens to pause.
+K_THREAD_STACK_DEFINE(serialRxStack, 4096);
+static struct k_thread serialRxThread;
+
 SerialLayer& SerialLayer::getInstance()
 {
-    static SerialLayer instance;
+#if DT_NODE_EXISTS(DT_NODELABEL(cdc_acm_uart0))
+    static SerialLayer instance(DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0)), Transport::Id::Serial, {});
+#else
+    static SerialLayer instance(nullptr, Transport::Id::Serial, {});
+#endif
     return instance;
 }
 
-SerialLayer::SerialLayer()
+SerialLayer& SerialLayer::getBridgeInstance()
+{
+#if DT_HAS_CHOSEN(gblink_bridge_uart)
+    static SerialLayer instance(DEVICE_DT_GET(DT_CHOSEN(gblink_bridge_uart)), Transport::Id::BridgeUart,
+                                g_bridgeRxRing);
+#else
+    static SerialLayer instance(nullptr, Transport::Id::BridgeUart, g_bridgeRxRing);
+#endif
+    return instance;
+}
+
+SerialLayer::SerialLayer(const struct device* dev, Transport::Id id, std::span<uint8_t> rxRing)
+    : m_target(dev), m_id(id), m_rxOnThread(!rxRing.empty())
 {
     ring_buf_init(&m_txRing, sizeof(m_txRingMem), m_txRingMem);
+    if (m_rxOnThread) ring_buf_init(&m_rxRing, rxRing.size(), rxRing.data());
     k_mutex_init(&m_txMutex);
+    k_sem_init(&m_rxReady, 0, 1);
     initIfNeeded();
+}
+
+void SerialLayer::drainReceive()
+{
+    for (;;)
+    {
+        k_sem_take(&m_rxReady, K_FOREVER);
+        uint8_t byte;
+        while (ring_buf_get(&m_rxRing, &byte, 1) == 1) processIncomingByte(byte);
+    }
 }
 
 void SerialLayer::initIfNeeded()
 {
     if (m_ready) return;
 
-#if DT_NODE_EXISTS(DT_NODELABEL(cdc_acm_uart0))
-    m_dev = DEVICE_DT_GET(DT_NODELABEL(cdc_acm_uart0));
+    m_dev = m_target;
     if (m_dev == nullptr || !device_is_ready(m_dev)) {
         // Retry on next sendFrame() if the device wasn't bound yet at init.
         return;
@@ -34,11 +72,15 @@ void SerialLayer::initIfNeeded()
         },
         this);
 
+    if (m_rxOnThread) {
+        k_thread_create(&serialRxThread, serialRxStack, K_THREAD_STACK_SIZEOF(serialRxStack),
+                        [](void* self, void*, void*) { static_cast<SerialLayer*>(self)->drainReceive(); },
+                        this, nullptr, nullptr, K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1), 0, K_NO_WAIT);
+        k_thread_name_set(&serialRxThread, "serial_rx");
+    }
+
     uart_irq_rx_enable(m_dev);
     m_ready = true;
-#else
-    m_dev = nullptr;
-#endif
 }
 
 void SerialLayer::onUartIrq()
@@ -49,14 +91,20 @@ void SerialLayer::onUartIrq()
         {
             uint8_t buf[64];
             int n = uart_fifo_read(m_dev, buf, sizeof(buf));
-            for (int i = 0; i < n; i++) processIncomingByte(buf[i]);
+            if (!m_rxOnThread) {
+                for (int i = 0; i < n; i++) processIncomingByte(buf[i]);
+            } else if (n > 0) {
+                if (ring_buf_put(&m_rxRing, buf, n) < static_cast<uint32_t>(n))
+                    s_rxOverflows = s_rxOverflows + 1;
+                k_sem_give(&m_rxReady);
+            }
         }
 
         if (uart_irq_tx_ready(m_dev))
         {
             // ring_buf_get_claim/finish (rather than get + put-back) keeps
             // byte order intact if the UART FIFO can only accept part of
-            // the chunk we offered.
+            // the offered chunk.
             uint8_t* tx_ptr;
             uint32_t claimed = ring_buf_get_claim(&m_txRing, &tx_ptr, 64);
             if (claimed == 0) {
@@ -122,10 +170,10 @@ void SerialLayer::dispatchFrame()
     // coincidentally form a parseable header on an unknown channel; those are
     // dropped without flipping routing.
     if (m_rxChannel == channelCommand && m_commandHandler.handler != nullptr) {
-        Transport::setActive(Transport::Id::Serial);
+        Transport::setActive(m_id);
         m_commandHandler.handler(payload, m_commandHandler.userData);
     } else if (m_rxChannel == channelData && m_dataHandler.handler != nullptr) {
-        Transport::setActive(Transport::Id::Serial);
+        Transport::setActive(m_id);
         m_dataHandler.handler(payload, m_dataHandler.userData);
     }
 }
@@ -185,10 +233,11 @@ void SerialLayer::setReceiveDataHandler(Transport::ReceiveHandler handler, void*
 }
 
 // APPLICATION level so the USB stack (brought up at POST_KERNEL 2) is ready
-// before we bind the CDC-ACM UART.
+// before the CDC-ACM UART is bound.
 static int serial_layer_init(void)
 {
     SerialLayer::getInstance();
+    SerialLayer::getBridgeInstance();
     return 0;
 }
 

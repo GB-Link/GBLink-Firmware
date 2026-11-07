@@ -22,19 +22,6 @@ enum LedSlot : uint8_t {
 bool landingPageEnabled();
 void setLandingPageEnabled(bool enabled);
 
-// Cable/SD-pin selection for GBA modes. Values are part of the host protocol
-// and the stored settings. There is no auto-detection anymore: CABLE_AUTO is
-// kept for older settings/web apps and is treated as GBC.
-enum CableSelection : uint8_t
-{
-    CABLE_AUTO = 0,
-    CABLE_FORCE_GBA = 1,
-    CABLE_FORCE_GBC = 2
-};
-
-// Fresh installs default to GBC; pre-v7 settings load as CABLE_AUTO.
-uint8_t getCableSelection();
-void setCableSelection(uint8_t cable); // out-of-range values ignored
 
 // Per-mode LED colours (logical RGB, 0-255; the WS2812 driver does GRB packing).
 void getLedColor(uint8_t slot, uint8_t out[3]);

@@ -1,4 +1,3 @@
-
 zephyr_library_sources(usbLayer.cpp)
 zephyr_library_sources(serialLayer.cpp)
 zephyr_library_sources(transport.cpp)

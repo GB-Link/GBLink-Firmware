@@ -7,7 +7,7 @@ struct SendLinkTypeContext : TransmitContext
     uint16_t type = 0;
 };
 
-TxValues sendLinkTypeCommandTransive(TransmitContext* ctx)
+static TxValues sendLinkTypeCommandTransive(TransmitContext* ctx)
 {
     auto* usbCtx = static_cast<SendLinkTypeContext*>(ctx);
     TxValues txValues;

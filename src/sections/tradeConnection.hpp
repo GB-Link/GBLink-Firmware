@@ -1,6 +1,7 @@
 #include <span>
 
 #include "../layers/packet/packetLayer.hpp"
+
 #include "../payloads/pokemon.hpp"
 #include "../payloads/mail.hpp"
 
@@ -14,14 +15,11 @@ extern "C"
 
 #pragma once
 
-
-
 class TradeConnection : public Section
 {
     struct CommandEntry
     {
         using SetupCallback = void(*)(void);
-
         TransmitBehaviour transive;
         SetupCallback setupCb;
     };

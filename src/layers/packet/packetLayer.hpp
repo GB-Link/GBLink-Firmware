@@ -1,5 +1,6 @@
 #include "../link/multiMode/multiMode.hpp"
 #include "../link/gbaLinkLayer.hpp"
+
 #include "./packetCommands/commands.hpp"
 #include "../../link_defines.h"
 
@@ -69,6 +70,7 @@ public:
         link_setTransmitCallback(nullptr, nullptr);
         link_setReceiveCallback(nullptr, nullptr);
         link_setTransiveDoneCallback(nullptr, nullptr);
+
     }
 
     void sendCommand(TransmitBehaviour handler)
@@ -79,6 +81,7 @@ public:
         std::swap(m_handler, handler);
         m_idle = false;
         irq_unlock(key);
+
     }
     
     TransiveResult awaitTransiveResults()
@@ -167,6 +170,7 @@ private:
             default: return;
         };
     }
+
 
     struct NextTransmit onTransmit()
     {
@@ -260,6 +264,7 @@ private:
         {
             txValues = m_handler.transmit();
         }
+
         m_transmittedCommand[m_transmitCommandIndex] = txValues;
         for (uint8_t i = 0; i < m_playerCount - 1; i++)
         {
@@ -279,6 +284,7 @@ private:
     atomic_t m_waitForDisable = 0;
 
     volatile bool m_idle = true;
+
     uint8_t m_seatNumber = 1;
     uint8_t m_playerCount = 2;
 
@@ -313,6 +319,7 @@ private:
         return self->onReceive(rxBytes);
     }
 
+
     static struct NextTransmit transmitCallback(void* userData)
     {
         PacketLayer* self = static_cast<PacketLayer*>(userData);
@@ -324,6 +331,5 @@ private:
         PacketLayer* self = static_cast<PacketLayer*>(userData);
         self->onTransiveDone(rxBytes, txValues);
     }
-
 
 };

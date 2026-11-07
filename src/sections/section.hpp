@@ -1,5 +1,6 @@
 
 #include "../layers/packet/packetLayer.hpp"
+
 #include "nextSectionState.hpp"
 #include "syscalls/kernel.h"
 
@@ -25,6 +26,7 @@ protected:
     {
         m_packetLayer.configurePlayer(0, 2);
 
+
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {
             k_sleep(K_MSEC(50));
@@ -39,6 +41,7 @@ protected:
     inline void connectAsSlave()
     {
         m_packetLayer.configurePlayer(1, 2);
+
 
         while(m_packetLayer.getReceivedHandshake() != LINK_SLAVE_HANDSHAKE) 
         {

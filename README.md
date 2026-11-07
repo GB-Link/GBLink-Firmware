@@ -29,12 +29,13 @@ Manual update
 | Mode | Command | Description |
 |:---|:---|:---|
 | **GBA Trade Emu** | `0x00` | Emulate a GBA link partner for Pokémon Gen 3 trades |
-| **GBA Link** | `0x01` | Bridge two GBA systems over the internet |
+| **GBA Link** | `0x01` | Link 2 to 4 GBA systems over the internet |
 | **GB Link** | `0x02` | SPI passthrough for Game Boy |
 | **GB Printer** | `0x03` | Game Boy Printer emulation (bit-bang SPI slave) |
 | **GBA Advance Wars** | `0x04` | Advance Wars 1 + 2 |
-| **GBA e-Reader** | `0x05` | Nintendo e-Reader emulation |
+| **GBA e-Reader** | `0x05` | Nintendo e-Reader emulation. SetMode third byte: `1` SMA4 US, `2` Pokémon RS US, `3` SMA4 JPN, `4` Pokémon RS JPN, `5`–`9` SMA4 EUR En/Fr/De/Es/It, `10` Pokémon Emerald US, `11` Pokémon Emerald JPN, `12` (Émeraude) / Emerald, `13` (Smaragd) / Emerald. |
 | **GBA Battle Chip Gate** | `0x06` | Mega Man Battle Network Battle Chip Gate / Progress / Beast Link |
+| **GBA Wireless Adapter** | `0x07` | Wireless Adapter emulation: trade and battle with FireRed/LeafGreen on Nintendo Switch through a companion ESP32 running [GB-Link Switch LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) |
 
 ---
 
@@ -65,7 +66,7 @@ The firmware uses the RP2040 PIO to communicate with the Game Boy. Connect the L
 | **SCK** (Clock) | **GP0** |
 | **SIN** (Data In) | **GP1** |
 | **SOUT** (Data Out) | **GP2** |
-| **SD** (Chip Select) | **GP3** (GBA cable) / **GP4** (GBC cable) |
+| **SD** (Chip Select) | **GP3** (link port pin 4) and **GP4** (link port pin 1), both read |
 | **GND** | **Ground** |
 
 Additional hardware pins:
@@ -74,6 +75,8 @@ Additional hardware pins:
 | **Voltage 3.3V** | **GP11** | Pull low for 3.3V |
 | **Voltage 5V** | **GP12** | Pull low for 5V |
 | **WS2812 LED** | **GP16** | NeoPixel status indicator |
+| **Bridge UART TX** | **GP8** | To the companion ESP32 (wireless adapter mode) |
+| **Bridge UART RX** | **GP9** | From the companion ESP32 (wireless adapter mode) |
 
 ---
 
@@ -100,8 +103,10 @@ LED color can also be set via USB command (`0x42`).
 
 | Cable Type | Supported Modes | Notes |
 |:---|:---|:---|
-| **OEM GBA Link Cable** | GBA modes only | SD on GP3. Select **GBA cable** (or Auto detect) in the launcher. |
-| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through. SD routes to GP4 in GBA mode. Default selection. |
+| **OEM GBA Link Cable** | GBA modes only | SD arrives on GP3. |
+| **Generic GBC Link Cable** | All GBA and GB modes | All 6 pins wired through, with pins 1 and 4 crossed, so SD arrives on GP4. |
+
+In GBA modes the adapter listens for SD on GP3 and GP4 at the same time and only drives the pin the Game Boy Advance answers on. In the GBA Link mode it remembers that pin until the adapter is unplugged or switched to another mode.
 
 **GBA link cable connectors are not identical: Cheap 3rd party GBA cables missing the hub typically only have 4 conductors and are missing a ground which results in a poor connection.**
 
@@ -109,8 +114,6 @@ LED color can also be set via USB command (`0x42`).
 - **Wide** connector = **Slave**
 
 The device **must** be connected to the **master connector** for GBA modes.
-
-> **Tip:** With **Auto detect** selected, connect the cable to the adapter before selecting a GBA mode in the web app — the cable type is sampled at mode selection time.
 
 ---
 
@@ -121,18 +124,16 @@ Commands are sent over the WebUSB command endpoint:
 | Range | Module | Commands |
 |:---|:---|:---|
 | `0x00–0x0F` | Control | `0x00` SetMode, `0x01` Cancel |
-| `0x10–0x1F` | GBA Link | SetModeMaster, SetModeSlave, StartHandshake, ConnectLink |
+| `0x10–0x1F` | GBA Link | `0x10` SetPlayerSettings (`[0x10, player count 2–4, seat]`, seat 0 is the GBA that hosts the link), `0x12` StartHandshake, `0x13` ConnectLink. Link data travels as 17-byte packets: the seat, then 8 link words. |
 | `0x20–0x2F` | GBA Emu | *(internal section commands)* |
 | `0x30–0x3F` | GB Link | `0x30` SetTimingConfig, `0x31` EnterPrinter, `0x32` ExitPrinter |
-| `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors, `0x48` Reboot, `0x49` SetCableOverride, `0x4a` GetCableType, `0x4b` SetCableSelection |
+| `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors, `0x48` Reboot, `0x4c` GetRfuIsrStats |
 | `0x44` | SetWebUsbLanding | (`data[1]`: 1 = on, 0 = off) persists whether the adapter advertises the **launcher.gblink.io** WebUSB landing page (the browser "open site" prompt on connect). It's stored in flash and applies on the next reconnect. The current state is reported as a 5th byte in the `0x0F` GetFirmwareInfo response. |
 | `0x45` | GetLedConfig | returns the persisted per-mode LED colours: `[0x45, count, r,g,b …]` (slots: 0 idle, 1 GBA/Celio, 2 GB/GBC, 3 printer, 4 Advance Wars, 5 e-Reader, 6 Battle Chip Gate). |
 | `0x46` | SetModeLedColor | (`[0x46, slot, r, g, b]`) persists a mode's colour (applied on next entry to that mode |
 |`0x42` | SetLEDColor | sets the LED live for previewing). |
 | `0x47` | ResetLedColors | restores all slots to the built-in defaults. Colours are full 0–255 RGB — on a WS2812 the magnitude is also the brightness. |
-| `0x49` | SetCableOverride | (`[0x49, 0 auto / 1 GBA / 2 GBC]`) session-only override of the cable/SD-pin path for GBA modes; the persisted selection is re-applied at boot. |
-| `0x4a` | GetCableType | returns `[0x4a, 0 GBA / 1 GBC]` — the cable path currently in effect: the forced selection/override if one is set, else the cable sampled at mode entry. |
-| `0x4b` | SetCableSelection | (`[0x4b, 0 auto / 1 GBA / 2 GBC]`) persists the cable selection in flash and applies it to the session (takes effect at the next link (re)configure). Fresh installs default to GBC (`2`); settings saved by firmware ≤ v2.2.2 load as auto (`0`), and the launcher also persists auto once when updating such an adapter. Reported as the 6th byte of the `0x0F` GetFirmwareInfo response. |
+| `0x4c` | GetRfuIsrStats | returns `[0x4c, 5 × u32 LE]` — wireless adapter transfer-path timing: worst interrupt pass (µs), passes longer than the 30 µs staging budget, tightest gap the GBA left between words (µs), passes counted, and the GPIO the last soft-reset pulse arrived on (`0xFF` if none yet). |
 
 ---
 
