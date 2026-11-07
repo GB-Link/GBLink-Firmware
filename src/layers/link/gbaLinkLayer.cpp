@@ -62,6 +62,7 @@ static constexpr k_timeout_t rxWatchdogTimeout = K_MSEC(1);
 
 static uint8_t g_sdPin = 0;
 static uint8_t g_sdCandidate = 0;
+static bool g_sdLearning = true;
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
@@ -207,7 +208,7 @@ static void pioIsr_done()
     if (pio_sm_is_rx_fifo_empty(g_pio.device, g_pio.id)) return;
     
     const uint32_t raw = pio_sm_get(g_pio.device, g_pio.id);
-    learnSdPin(raw);
+    if (g_sdLearning) learnSdPin(raw);
     g_wordCount++;
     const uint16_t rxData = sdPinsDecode(raw);
     if (g_receiveCallback) g_receiveCallback(rxData, g_receiveUserData);
@@ -291,6 +292,7 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     gpio_pull_up(SD_GBA_pin);
     gpio_pull_up(SD_GBC_pin);
 
+    g_sdLearning = true;
     g_sdCandidate = 0;
     setSdPin(0);
 
@@ -320,6 +322,14 @@ uint32_t link_getPin(enum LinkPin pin)
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 uint32_t link_receivedWordCount() { return g_wordCount; }
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+void link_enableBothSdPins()
+{
+    g_sdLearning = false;
+    setSdPin(SD_PIN_GP3 | SD_PIN_GP4);
+}
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 

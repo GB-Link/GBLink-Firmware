@@ -70,6 +70,8 @@ static void configureEreaderSlavePio(void)
         RPI_PICO_PIO_GET_WRAP_TARGET(pio_slave_ereader)
     );
 
+    link_enableBothSdPins();
+
     // SO is held low on the GPIO, not by the PIO, so the GBA stays the parent.
     gpio_init(link_getPin(SO));
     gpio_set_dir(link_getPin(SO), GPIO_OUT);

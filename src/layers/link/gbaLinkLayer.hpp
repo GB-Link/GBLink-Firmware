@@ -62,6 +62,8 @@ uint32_t link_getPin(enum LinkPin pin);
 
 void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t wrapTarget);
 
+void link_enableBothSdPins();
+
 uint32_t link_receivedWordCount();
 
 uint8_t link_readPartnerPins();
