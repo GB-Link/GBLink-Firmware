@@ -12,7 +12,7 @@ void RfuWirelessModule::execute()
     // later, as a partner joins (receiveCommand). The master/slave role is
     // irrelevant: the protocol core is symmetric and hosting is decided
     // in-game.
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
 
     {
         RfuProtocolSection section(m_role);

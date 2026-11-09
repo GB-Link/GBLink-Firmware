@@ -4,30 +4,26 @@ extern "C"
     #include "../payloads/trainerCard.h"
     #include "../payloads/linkPlayer.h"
 }
-#include "../callbacks/commands.hpp"
-#include <algorithm>
 
-using namespace legacy;
+#include "../layers/packet/packetCommands/commands.hpp"
 
 NextSection TradeLounge::process()
 {
     connectAsMaster();
-    m_packetLayer.setTransiveHandler(sendLinkTypeCommand(LINKTYPE_TRADE));
+    m_packetLayer.sendCommand(sendLinkTypeCommand(LINKTYPE_TRADE));
     NextSection nextSection = NextSection::connection;
 
     while (!m_cancel)
     {
-        auto result = m_packetLayer.awaitTransiveResults();
+        PacketLayer::TransiveResult result = m_packetLayer.awaitTransiveResults();
         std::span<const uint16_t> command = result.received;
 
         switch(command[0])
         {
             case LINKCMD_INIT_BLOCK:
             {
-                auto transive = blockCommand();
                 const struct LinkPlayerBlock* linkPlayerBlock = linkPLayer(LINKTYPE_TRADE);
-                blockCommandSetup(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock));
-                m_packetLayer.setTransiveHandler(transive);
+                m_packetLayer.sendCommand(blockCommand(linkPlayerBlock, sizeof(*linkPlayerBlock), sizeof(*linkPlayerBlock)));
                 break;
             }
             
@@ -35,14 +31,12 @@ NextSection TradeLounge::process()
             {
                 if (command[1] == LINK_KEY_CODE_EXIT_ROOM)
                 {
-                    moveCommandInit(LINK_KEY_CODE_EXIT_ROOM);
-                    m_packetLayer.setTransiveHandler(moveCommand());
+                    m_packetLayer.sendCommand(moveCommand(LINK_KEY_CODE_EXIT_ROOM));
                     nextSection = NextSection::exit;
                 } 
                 if (command[1] == LINK_KEY_CODE_READY)
                 {   
-                    moveCommandInit(LINK_KEY_CODE_READY);
-                    m_packetLayer.setTransiveHandler(moveCommand());
+                    m_packetLayer.sendCommand(moveCommand(LINK_KEY_CODE_READY));
                     nextSection = NextSection::connection;
                 }
                 break;
@@ -50,7 +44,7 @@ NextSection TradeLounge::process()
             
             case LINKCMD_READY_CLOSE_LINK:
             {
-                m_packetLayer.setTransiveHandler(readyCloseLinkCommand());
+                m_packetLayer.sendCommand(readyCloseLinkCommand());
                 k_sleep(K_MSEC(200));
                 return nextSection;
             }

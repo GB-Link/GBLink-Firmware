@@ -1,6 +1,5 @@
 #include "persist.hpp"
 #include "hardware.hpp"
-
 #include <cstring>
 #include <zephyr/storage/flash_map.h>
 

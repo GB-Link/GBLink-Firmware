@@ -1,6 +1,7 @@
 #include <span>
 
-#include "../layers/legacyPacketLayer.hpp"
+#include "../layers/packet/packetLayer.hpp"
+
 
 #include "nextSectionState.hpp"
 #include "section.hpp"

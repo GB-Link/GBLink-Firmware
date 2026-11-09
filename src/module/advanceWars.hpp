@@ -44,6 +44,6 @@ private:
     struct k_sem m_waitForStart;
 
     AwProtocolSection* m_currentSection = nullptr;
-    enum LinkMode m_linkMode = SLAVE;
+    enum MultiMode m_multiMode = SLAVE;
     awproto::GameVariant m_variant;
 };

@@ -6,10 +6,8 @@
 
 #include "../link_defines.h"
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
+
+#include "../layers/link/gbaLinkLayer.hpp"
 
 namespace erproto
 {
@@ -32,6 +30,7 @@ constexpr uint8_t WIRE_FLAG_SCAN_ARMED = 0x01;
 constexpr uint8_t WIRE_FLAG_IDLE_RX    = 0x02;
 constexpr uint8_t WIRE_FLAG_HANDSHAKE  = 0x04;
 constexpr uint8_t WIRE_FLAG_SUMMARY    = 0x08;
+constexpr uint8_t WIRE_FLAG_SD_FLIPPED = 0x10;
 constexpr uint8_t WIRE_FLAG_PIO_ARMED  = 0x20;
 constexpr uint8_t WIRE_FLAG_NO_TRAFFIC = 0x40;
 constexpr uint8_t WIRE_FLAG_SESSION    = 0x80;
@@ -43,19 +42,19 @@ constexpr uint16_t sma4CardWords = sma4CardBytes / 2;
 
 enum class Profile : uint8_t
 {
-    sma4           = 1,
-    pokemonRuby    = 2,
-    sma4JPN        = 3,
-    pokemonRubyJPN = 4,
-    sma4EUR        = 5,
-    sma4EURFra     = 6,
-    sma4EURGer     = 7,
-    sma4EUREsp     = 8,
-    sma4EURIta     = 9,
-    pokemonEmerald    = 10,
-    pokemonEmeraldJPN = 11,
-    pokemonEmeraldFra = 12, // (Émeraude) / Emerald
-    pokemonEmeraldGer = 13, // (Smaragd) / Emerald
+    sma4                = 1,
+    pokemonRuby         = 2,
+    sma4JPN             = 3,
+    pokemonRubyJPN      = 4,
+    sma4EUR             = 5,
+    sma4EURFra          = 6,
+    sma4EURGer          = 7,
+    sma4EUREsp          = 8,
+    sma4EURIta          = 9,
+    pokemonEmerald      = 10,
+    pokemonEmeraldJPN   = 11,
+    pokemonEmeraldFra   = 12,
+    pokemonEmeraldGer   = 13
 };
 
 inline bool isSma4Profile(Profile p)
@@ -131,12 +130,6 @@ constexpr uint16_t kReadyAdvance    = 0xAAAA; // e-reader block advance; the LIN
 constexpr uint16_t kSendKeys        = LINKCMD_BLENDER_SEND_KEYS;
 
 constexpr uint32_t kLinkTypeRuby = LINKTYPE_MYSTERY_EVENT;
-constexpr uint8_t  kVersionRuby     = 0;
-constexpr uint8_t  kVersionEmerald  = 3;
-constexpr uint8_t  kLanguageJapanese = 1;
-constexpr uint8_t  kLanguageEnglish  = 2;
-constexpr uint8_t  kLanguageFrench   = 3;
-constexpr uint8_t  kLanguageGerman   = 5;
 }
 
 inline bool isIdleWord(uint16_t w)
@@ -177,25 +170,8 @@ struct PokemonConfig
 
 inline PokemonConfig pokemonConfigFor(Profile p)
 {
-    const bool emerald =
-        p == Profile::pokemonEmerald
-        || p == Profile::pokemonEmeraldJPN
-        || p == Profile::pokemonEmeraldGer
-        || p == Profile::pokemonEmeraldFra;
-
-    uint8_t language = poke::kLanguageEnglish;
-    if (p == Profile::pokemonRubyJPN || p == Profile::pokemonEmeraldJPN)
-        language = poke::kLanguageJapanese;
-    else if (p == Profile::pokemonEmeraldGer)
-        language = poke::kLanguageGerman;
-    else if (p == Profile::pokemonEmeraldFra)
-        language = poke::kLanguageFrench;
-
-    return {
-        poke::kLinkTypeRuby,
-        emerald ? poke::kVersionEmerald : poke::kVersionRuby,
-        language,
-    };
+    const uint8_t language = (p == Profile::pokemonRubyJPN) ? 1 : 2;
+    return { poke::kLinkTypeRuby, 0, language };
 }
 
 inline void buildLinkPlayerBlock(uint8_t* block, const PokemonConfig& cfg)
@@ -301,9 +277,8 @@ struct EReaderProxy
         emitWire(WIRE_FLAG_SESSION, 0, 0);
     }
 
-    // scToggled: SC clock activity observed since the previous beacon, so the
-    // host can tell a partner that clocks without any word arriving (no SD wire
-    // in the cable) from an idle one. rx is always 0.
+    // scToggled: SC clock activity observed since the previous beacon.
+    // The rx field used to carry the selected cable type and is now always 0.
     void emitWireNoTraffic(bool scToggled)
     {
         const uint8_t pins =
@@ -312,7 +287,7 @@ struct EReaderProxy
         emitWire(WIRE_FLAG_NO_TRAFFIC, 0, static_cast<uint16_t>(pins));
     }
 
-    void noteWireRound(uint16_t rx, uint16_t tx)
+    void noteWireRound(uint16_t rx, const uint16_t tx)
     {
         if (!wireLogEnabled) return;
 

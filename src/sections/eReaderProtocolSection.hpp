@@ -7,10 +7,6 @@
 
 #include <zephyr/kernel.h>
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
 
 class EReaderProtocolSection
 {

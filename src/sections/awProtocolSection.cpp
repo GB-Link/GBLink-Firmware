@@ -9,6 +9,10 @@
 #include "../layers/transport.hpp"
 #include "../linkStatus.hpp"
 
+
+#include "../layers/link/gbaLinkLayer.hpp"
+
+
 // Outbound MAW1 byte stream. Single producer (PIO done-ISR), single consumer
 // (process() thread) — the safe concurrent use of a Zephyr ring_buf.
 RING_BUF_DECLARE(g_awOutRing, 2048);
@@ -22,9 +26,9 @@ static awproto::Maw1StreamParser g_parser;
 // pre-session noise out.
 static volatile bool g_sessionActive = false;
 
-static struct LegacyTransmit transmitCallback(void*)
+static struct NextTransmit transmitCallback(void*)
 {
-    return { g_proxy.stagedTx, g_proxy.stagedTiming };
+    return { 0, g_proxy.stagedTx, g_proxy.stagedTiming }; //FIXME
 }
 
 static void receiveCallback(uint16_t rx, void*)
@@ -71,22 +75,22 @@ void awProto_receiveHandler(std::span<const uint8_t> data, void*)
     }
 }
 
-AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum LinkMode linkMode)
+AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum MultiMode multiMode)
 {
     new (&g_proxy) awproto::AwProxy();
     new (&g_parser) awproto::Maw1StreamParser();
 
     g_proxy.cfg = awproto::AwConfig::forVariant(variant);
     // SLAVE link mode means the attached GBA is the bus master (player 1).
-    g_proxy.gbaIsMaster = (linkMode == SLAVE);
+    g_proxy.gbaIsMaster = (multiMode == SLAVE);
     g_proxy.emit = &emitTrampoline;
 
     g_parser.setCallback(&frameTrampoline, nullptr);
 
     ring_buf_reset(&g_awOutRing);
 
-    link_setLegacyTransmitCallback(&transmitCallback, nullptr);
-    link_setLegacyReceiveCallback(&receiveCallback, nullptr);
+    link_setTransmitCallback(&transmitCallback, this);
+    link_setReceiveCallback(&receiveCallback, this);
 
     g_sessionActive = true;
 }
@@ -97,8 +101,8 @@ AwProtocolSection::~AwProtocolSection()
 
     // The module disables the link (link_changeMode(DISABLED)) before this
     // destructor runs, so no PIO ISR can race the deregistration below.
-    link_setLegacyTransmitCallback(nullptr, nullptr);
-    link_setLegacyReceiveCallback(nullptr, nullptr);
+    link_setTransmitCallback(nullptr, nullptr);
+    link_setReceiveCallback(nullptr, nullptr);
 }
 
 void AwProtocolSection::process()

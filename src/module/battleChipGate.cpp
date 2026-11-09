@@ -1,10 +1,9 @@
 #include "battleChipGate.hpp"
 #include "../linkStatus.hpp"
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
+#include "../layers/link/multiMode/multiMode.hpp"
+#include "../layers/link/ereader/ereader.hpp"
+
 
 void BattleChipGateModule::execute()
 {
@@ -22,8 +21,8 @@ void BattleChipGateModule::execute()
         section.armLink();
         sendLinkStatus(LinkStatus::LinkConnected);
         section.process();
-        link_changeMode(DISABLED);
-        link_releasePartnerPins();
+        multiMode_selectMode(DISABLED);
+        ereader_releasePartnerPins();
     }
     m_currentSection = nullptr;
 }

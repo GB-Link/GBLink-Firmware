@@ -4,19 +4,13 @@
 #include <new>
 
 #include <zephyr/sys/ring_buffer.h>
-
-#include "../callbacks/blockCommand.hpp"
-#include "../callbacks/commands.hpp"
-#include "../layers/legacyPacketLayer.hpp"
-#include "../layers/transport.hpp"
 #include "../link_defines.h"
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
-
-using namespace legacy;
+#include "../layers/packet/packetCommands/commands.hpp"
+#include "../layers/packet/packetLayer.hpp"
+#include "../layers/transport.hpp"
+#include "../layers/link/ereader/ereader.hpp"
+#include "../layers/link/gbaLinkLayer.hpp"
 
 RING_BUF_DECLARE(g_erOutRing, 2048);
 
@@ -39,7 +33,7 @@ static PacketLayer& pokemonPacket()
     return *std::launder(reinterpret_cast<PacketLayer*>(g_pokemonPacketStorage));
 }
 
-static struct LegacyTransmit sma4TransmitCallback(void*);
+static struct NextTransmit sma4TransmitCallback(void*);
 static void sma4ReceiveCallback(uint16_t rx, void*);
 
 static bool g_pokeLinkPlayerPending = false;
@@ -63,18 +57,20 @@ static void ensurePioLink()
     // the link, so running it after would kill the mode configured just below.
     erProto_shutdownPokemonPacketLayer();
 
-    if (erproto::isSma4Profile(g_proxy.profile))
-        link_configureEreaderSlave();
-    else
-    {
-        link_configurePartnerPresence();
-        k_sleep(K_MSEC(200));
-        link_configurePokemonSlave();
-    }
-    g_multiPioActive = true;
-
     if (!erproto::isSma4Profile(g_proxy.profile))
         erProto_initPokemonPacketLayer();
+    
+    if (erproto::isSma4Profile(g_proxy.profile))
+    {
+        ereader_configureEreaderSlave();
+    }
+    else
+    {
+        ereader_configurePartnerPresence();
+        k_sleep(K_MSEC(200));
+        multiMode_selectMode(SLAVE);
+    }
+    g_multiPioActive = true;
 
     g_proxy.emitWire(erproto::WIRE_FLAG_PIO_ARMED, 0, erproto::poke::kSlaveHandshake);
 }
@@ -86,9 +82,9 @@ static void erProto_shutdownPokemonPacketLayer()
     pokemonPacket().~PacketLayer();
     // The constructor self-registered the link ISR callbacks; nothing may keep
     // pointing at the destroyed instance.
-    link_setLegacyTransmitCallback(nullptr, nullptr);
-    link_setLegacyReceiveCallback(nullptr, nullptr);
-    link_setLegacyTransiveDoneCallback(nullptr, nullptr);
+    link_setTransmitCallback(nullptr, nullptr);
+    link_setReceiveCallback(nullptr, nullptr);
+    link_setTransiveDoneCallback(nullptr, nullptr);
     g_pokemonPacketLive = false;
 }
 
@@ -98,160 +94,180 @@ static void erProto_initPokemonPacketLayer()
     new (g_pokemonPacketStorage) PacketLayer();
     g_pokemonPacketLive = true;
     pokemonPacket().enableHandshake();
-    pokemonPacket().setTransiveHandler(emptyCommand());
+    pokemonPacket().sendCommand(emptyCommand());
     g_pokeLinkPlayerPending = false;
     g_pokePayloadPending = false;
     g_lpFinished = false;
-    blockCommandReset();
 }
 
 static void logPacketFrame(erproto::EReaderProxy& proxy,
                            const PacketLayer::TransiveResult& result)
 {
     if (!proxy.wireLogEnabled) return;
-    proxy.noteWireRound(result.received[0], result.transmitted[0]);
+    TxValues txValues = result.transmitted[0];
+    proxy.noteWireRound(result.received[0], txValues[0]);
 }
 
-static uint8_t g_pokeIdleIdx = 0;
-
-static void pokeSendKeysInit(std::span<const uint16_t>)
+struct PokeSendContext : TransmitContext
 {
-    g_pokeIdleIdx = 0;
+    uint8_t pokeIdleIdx = 0;
+};
+
+static TxValues pokeSendKeysTransive(TransmitContext* ctx)
+{
+    auto* pokeCtx = static_cast<PokeSendContext*>(ctx);
+
+    const uint16_t value = (pokeCtx->pokeIdleIdx == 0) ? erproto::poke::kSendKeys : 0x00;
+
+    pokeCtx->pokeIdleIdx++;
+    if (pokeCtx->pokeIdleIdx >= 8) pokeCtx->pokeIdleIdx = 0;
+
+    return TxValues(value);
 }
 
-static uint16_t pokeSendKeysTransive()
-{
-    if (g_pokeIdleIdx == 0)
-    {
-        g_pokeIdleIdx++;
-        return erproto::poke::kSendKeys;
-    }
-    g_pokeIdleIdx++;
-    if (g_pokeIdleIdx >= 8) g_pokeIdleIdx = 0;
-    return 0;
-}
 
-static CommandState pokeSendKeysDone()
+static CommandState pokeSendKeysDone(TransmitContext* ctx)
 {
+    (void)ctx;
     return CommandState::done;
 }
 
-static TransiveStruct pokeSendKeysIdle()
+TransmitBehaviour pokeSendKeysIdle()
 {
-    static TransiveStruct transive
+    std::unique_ptr<PokeSendContext> c = std::make_unique<PokeSendContext>();
+    c->pokeIdleIdx = 0;
+
+    TransmitBehaviour transive
     {
-        .init = pokeSendKeysInit,
-        .transive = pokeSendKeysTransive,
-        .transiveDone = pokeSendKeysDone
+        .context = std::move(c),
+        .transmitCallback = pokeSendKeysTransive,
+        .transmitDoneCallback = pokeSendKeysDone
     };
     return transive;
 }
 
 enum class LpPhase : uint8_t { preDelay, initFrame, postDelay, cont };
-static LpPhase  g_lpPhase         = LpPhase::preDelay;
-static uint8_t  g_lpPreDelayLeft  = 0;
-static uint8_t  g_lpPostDelayLeft = 0;
-static uint8_t  g_lpContFramesSent = 0;
-static uint8_t  g_lpFrameIdx      = 0;
-static uint16_t g_lpTxFrame[8]    = {};
 
-static void lpPrepareZeroFrame()
+
+struct PokeLinkPlayerContext : TransmitContext
+{
+    uint8_t  lpFrameIdx = 0;
+
+    LpPhase  lpPhase = LpPhase::preDelay;
+    uint8_t  lpPreDelayLeft  = 0;
+    uint8_t  lpPostDelayLeft = 0;
+    uint8_t  lpContFramesSent = 0;
+    uint16_t lpTxFrame[8]    = {};
+};
+
+static void lpPrepareZeroFrame(PokeLinkPlayerContext* ctx)
 {
     for (int i = 0; i < 8; i++)
-        g_lpTxFrame[i] = 0;
+    {
+        ctx->lpTxFrame[i] = 0;
+    }
 }
 
-static void lpPrepareInitFrame()
+static void lpPrepareInitFrame(PokeLinkPlayerContext* ctx)
 {
-    g_lpTxFrame[0] = LINKCMD_INIT_BLOCK;
-    g_lpTxFrame[1] = static_cast<uint16_t>(kPokeLinkPlayerBytes);
-    g_lpTxFrame[2] = static_cast<uint16_t>(LINK_PLAYER_ID);
+    ctx->lpTxFrame[0] = LINKCMD_INIT_BLOCK;
+    ctx->lpTxFrame[1] = static_cast<uint16_t>(kPokeLinkPlayerBytes);
+    ctx->lpTxFrame[2] = static_cast<uint16_t>(LINK_PLAYER_ID);
     for (int i = 3; i < 8; i++)
-        g_lpTxFrame[i] = 0;
+    {
+        ctx->lpTxFrame[i] = 0;
+    }
 }
 
-static void lpPrepareContFrame(size_t offset)
+static void lpPrepareContFrame(size_t offset, PokeLinkPlayerContext* ctx)
 {
     const size_t remaining = kPokeLinkPlayerBytes - offset;
     const size_t chunkLen = remaining < 14 ? remaining : 14;
 
-    g_lpTxFrame[0] = LINKCMD_CONT_BLOCK;
+    ctx->lpTxFrame[0] = LINKCMD_CONT_BLOCK;
     for (int i = 0; i < 7; i++)
-        g_lpTxFrame[i + 1] = 0;
+        ctx->lpTxFrame[i + 1] = 0;
 
     for (size_t i = 0; i + 1 < chunkLen; i += 2)
     {
-        g_lpTxFrame[1 + (i / 2)] = static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i])
+        ctx->lpTxFrame[1 + (i / 2)] = static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i])
                                | (static_cast<uint16_t>(g_pokeLinkPlayerBuf[offset + i + 1]) << 8);
     }
     if (chunkLen % 2 == 1)
-        g_lpTxFrame[1 + (chunkLen / 2)] = g_pokeLinkPlayerBuf[offset + chunkLen - 1];
+        ctx->lpTxFrame[1 + (chunkLen / 2)] = g_pokeLinkPlayerBuf[offset + chunkLen - 1];
 }
 
-static void pokeLinkPlayerContInit(std::span<const uint16_t>)
+static TxValues pokeLinkPlayerContTransive(TransmitContext* ctx)
 {
-    g_lpFrameIdx = 0;
+    auto* pokeCtx = static_cast<PokeLinkPlayerContext*>(ctx);
+    TxValues txValues;
+    txValues.push(pokeCtx->lpTxFrame[pokeCtx->lpFrameIdx++]);
+    return txValues;
 }
 
-static uint16_t pokeLinkPlayerContTransive()
+static CommandState pokeLinkPlayerContDone(TransmitContext* ctx)
 {
-    return g_lpTxFrame[g_lpFrameIdx++];
-}
+    auto* pokeCtx = static_cast<PokeLinkPlayerContext*>(ctx);
+    pokeCtx->lpFrameIdx = 0;
 
-static CommandState pokeLinkPlayerContDone()
-{
-    g_lpFrameIdx = 0;
-
-    switch (g_lpPhase)
+    switch (pokeCtx->lpPhase)
     {
         case LpPhase::preDelay:
-            if (--g_lpPreDelayLeft > 0)
-                lpPrepareZeroFrame();
+            if (--pokeCtx->lpPreDelayLeft > 0)
+                lpPrepareZeroFrame(pokeCtx);
             else
             {
-                g_lpPhase = LpPhase::initFrame;
-                lpPrepareInitFrame();
+                pokeCtx->lpPhase = LpPhase::initFrame;
+                lpPrepareInitFrame(pokeCtx);
             }
             break;
 
         case LpPhase::initFrame:
-            g_lpPhase = LpPhase::postDelay;
-            g_lpPostDelayLeft = 2;
-            lpPrepareZeroFrame();
+            pokeCtx->lpPhase = LpPhase::postDelay;
+            pokeCtx->lpPostDelayLeft = 2;
+            lpPrepareZeroFrame(pokeCtx);
             break;
 
         case LpPhase::postDelay:
-            if (--g_lpPostDelayLeft > 0)
-                lpPrepareZeroFrame();
+            if (--pokeCtx->lpPostDelayLeft > 0)
+                lpPrepareZeroFrame(pokeCtx);
             else
             {
-                g_lpPhase = LpPhase::cont;
-                g_lpContFramesSent = 0;
-                lpPrepareContFrame(0);
+                pokeCtx->lpPhase = LpPhase::cont;
+                pokeCtx->lpContFramesSent = 0;
+                lpPrepareContFrame(0, pokeCtx);
             }
             break;
 
         case LpPhase::cont:
-            g_lpContFramesSent++;
-            if (g_lpContFramesSent >= 5)
+            pokeCtx->lpContFramesSent++;
+            if (pokeCtx->lpContFramesSent >= 5)
             {
                 g_lpFinished = true;
                 return CommandState::done;
             }
-            lpPrepareContFrame(static_cast<size_t>(g_lpContFramesSent) * 14);
+            lpPrepareContFrame(static_cast<size_t>(pokeCtx->lpContFramesSent) * 14, pokeCtx);
             break;
     }
 
     return CommandState::resume;
 }
 
-static TransiveStruct pokeLinkPlayerContCommand()
+TransmitBehaviour pokeLinkPlayerContCommand()
 {
-    static TransiveStruct transive
+    std::unique_ptr<PokeLinkPlayerContext> c = std::make_unique<PokeLinkPlayerContext>();
+    c->lpPhase         = LpPhase::preDelay;
+    c->lpPreDelayLeft  = 2;
+    c->lpPostDelayLeft = 2;
+    c->lpContFramesSent = 0;
+    c->lpFrameIdx      = 0;
+    lpPrepareZeroFrame(c.get());
+
+    TransmitBehaviour transive
     {
-        .init = pokeLinkPlayerContInit,
-        .transive = pokeLinkPlayerContTransive,
-        .transiveDone = pokeLinkPlayerContDone
+        .context = std::move(c),
+        .transmitCallback = pokeLinkPlayerContTransive,
+        .transmitDoneCallback = pokeLinkPlayerContDone
     };
     return transive;
 }
@@ -259,14 +275,9 @@ static TransiveStruct pokeLinkPlayerContCommand()
 static void pokemonArmLinkPlayerFull(PacketLayer& layer)
 {
     erproto::buildLinkPlayerBlock(g_pokeLinkPlayerBuf, g_proxy.pokeCfg);
-    g_lpPhase         = LpPhase::preDelay;
-    g_lpPreDelayLeft  = 2;
-    g_lpPostDelayLeft = 2;
-    g_lpContFramesSent = 0;
-    g_lpFinished      = false;
-    g_lpFrameIdx      = 0;
-    lpPrepareZeroFrame();
-    layer.setTransiveHandler(pokeLinkPlayerContCommand());
+
+    
+    layer.sendCommand(pokeLinkPlayerContCommand());
     g_pokeLinkPlayerPending = true;
 }
 
@@ -301,10 +312,9 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         {
             g_lpPostWaitCount = 0;
             proxy.pokeWaitingPayload = false;
-            blockCommandSetup(proxy.card,
+            layer.sendCommand(blockCommand(proxy.card,
                               static_cast<uint16_t>(proxy.cardSize),
-                              static_cast<uint16_t>(proxy.cardSize));
-            layer.setTransiveHandler(blockCommand());
+                              static_cast<uint16_t>(proxy.cardSize)));
             g_pokePayloadPending = true;
             proxy.emitPhase(erproto::Phase::sending);
         }
@@ -312,23 +322,23 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         {
             g_lpPostWaitCount++;
             if (layer.idle())
-                layer.setTransiveHandler(emptyCommand());
+                layer.sendCommand(emptyCommand());
         }
     }
     else if (cmd == LINKCMD_READY_EXIT_STANDBY && !g_pokePayloadPending)
     {
-        layer.setTransiveHandler(readyExitStandbyCommand());
+        layer.sendCommand(readyExitStandbyCommand());
     }
     else if (cmd == LINKCMD_READY_CLOSE_LINK && proxy.pokeSentPayload && layer.idle())
     {
-        layer.setTransiveHandler(readyCloseLinkCommand());
+        layer.sendCommand(readyCloseLinkCommand());
         proxy.emitComplete(1);
     }
     else if (!g_pokeLinkPlayerPending && !g_pokePayloadPending
              && cmd == LINKCMD_SEND_HELD_KEYS
              && layer.idle())
     {
-        layer.setTransiveHandler(pokeSendKeysIdle());
+        layer.sendCommand(pokeSendKeysIdle());
     }
 
     if (g_pokeLinkPlayerPending && g_lpFinished)
@@ -338,19 +348,16 @@ static void pokemonHandleTransiveFrame(erproto::EReaderProxy& proxy,
         proxy.pokeSentLinkPlayer = true;
         g_lpPostWaitCount = 0;
         proxy.pokeWaitingPayload = true;
-        layer.setTransiveHandler(emptyCommand());
+        layer.sendCommand(emptyCommand());
     }
 
-    if (g_pokePayloadPending && blockCommandTransferComplete()
-        && blockCommandBytesSent() >= static_cast<uint16_t>(proxy.cardSize)
-        && layer.idle())
+    if (g_pokePayloadPending && layer.idle())
     {
-        blockCommandConsumeComplete();
         g_pokePayloadPending = false;
         proxy.pokeSentPayload = true;
         proxy.pokeWaitingPayload = false;
         proxy.scanArmed = false;
-        layer.setTransiveHandler(emptyCommand());
+        layer.sendCommand(emptyCommand());
     }
 }
 
@@ -367,9 +374,11 @@ static void pokemonPumpPacketLayer()
         pokemonHandleTransiveFrame(proxy, layer, *result);
 }
 
-static struct LegacyTransmit sma4TransmitCallback(void*)
+static struct NextTransmit sma4TransmitCallback(void*)
 {
-    return { g_proxy.stagedTx, 15370 };
+    TxValues txValues;
+    txValues.push(g_proxy.stagedTx);
+    return {1, txValues, 15370 };
 }
 
 static void sma4ReceiveCallback(uint16_t rx, void*)
@@ -409,14 +418,10 @@ void erProto_receiveHandler(std::span<const uint8_t> data, void*)
         g_pokeLinkPlayerPending = false;
         g_pokePayloadPending = false;
         g_lpFinished = false;
-        g_lpPhase = LpPhase::preDelay;
-        g_lpPreDelayLeft = 0;
-        g_lpPostDelayLeft = 0;
-        g_lpContFramesSent = 0;
         g_lpPostWaitCount = 0;
-        blockCommandReset();
+        
         if (g_pokemonPacketLive)
-            pokemonPacket().setTransiveHandler(emptyCommand());
+            pokemonPacket().sendCommand(emptyCommand());
     }
 
     g_proxy.applyHostFrame(cmd, payload, payloadLen);
@@ -439,8 +444,8 @@ EReaderProtocolSection::EReaderProtocolSection(erproto::Profile profile)
     if (erproto::isSma4Profile(profile))
     {
         g_proxy.stagedTx = g_proxy.sma4HandshakeId();
-        link_setLegacyTransmitCallback(&sma4TransmitCallback, nullptr);
-        link_setLegacyReceiveCallback(&sma4ReceiveCallback, nullptr);
+        link_setTransmitCallback(&sma4TransmitCallback, nullptr);
+        link_setReceiveCallback(&sma4ReceiveCallback, nullptr);
     }
     else
     {
@@ -454,9 +459,9 @@ EReaderProtocolSection::~EReaderProtocolSection()
 {
     g_sessionActive = false;
     erProto_shutdownPokemonPacketLayer();
-    link_setLegacyTransmitCallback(nullptr, nullptr);
-    link_setLegacyReceiveCallback(nullptr, nullptr);
-    link_setLegacyTransiveDoneCallback(nullptr, nullptr);
+    link_setTransmitCallback(nullptr, nullptr);
+    link_setReceiveCallback(nullptr, nullptr);
+    link_setTransiveDoneCallback(nullptr, nullptr);
 }
 
 void EReaderProtocolSection::armLink()

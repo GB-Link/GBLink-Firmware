@@ -5,26 +5,35 @@
 
 #include "../layers/transport.hpp"
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
+#include "../layers/link/gbaLinkLayer.hpp"
+#include "../layers/link/multiMode/multiMode.hpp"
+
 
 static bcgproto::BcgProxy g_proxy;
 static volatile bool g_sessionActive = false;
+static volatile bool g_rearmRequested = false;
 
 static constexpr int kStatusIntervalLoops = 50;
 static constexpr int kLoopSleepMs = 10;
 static constexpr uint32_t kSlaveTimingUs = 15370;
 
-static struct LegacyTransmit transmitCallback(void*)
+// The gate sits in seat 0 (multi-mode slave) of a 2-player link: one word per transfer.
+static constexpr uint8_t kSeatNumber = 0;
+
+static struct NextTransmit transmitCallback(void*)
 {
-    return { g_proxy.stagedTx, kSlaveTimingUs };
+    return { kSeatNumber, TxValues(g_proxy.stagedTx), kSlaveTimingUs };
 }
 
 static void receiveCallback(uint16_t rx, void*)
 {
     g_proxy.onRound(rx);
+}
+
+void bcgProto_requestRearm()
+{
+    if (g_sessionActive)
+        g_rearmRequested = true;
 }
 
 void bcgProto_receiveHandler(std::span<const uint8_t> data, void*)
@@ -45,7 +54,7 @@ static void emitStatus()
 {
     uint8_t pkt[64] = {};
     std::memcpy(pkt, bcgproto::BCGS_MAGIC, 4);
-    const uint32_t rx = link_getReceivedWordCount();
+    const uint32_t rx = link_receivedWordCount();
     pkt[4] = static_cast<uint8_t>(rx);
     pkt[5] = static_cast<uint8_t>(rx >> 8);
     pkt[6] = static_cast<uint8_t>(rx >> 16);
@@ -54,7 +63,7 @@ static void emitStatus()
     pkt[8] = static_cast<uint8_t>(chip);
     pkt[9] = static_cast<uint8_t>(chip >> 8);
     pkt[10] = static_cast<uint8_t>(static_cast<int8_t>(g_proxy.stage));
-    // pkt[11] stays 0: clients read it as an SD-path flag, and SD is read on both pins.
+    pkt[11] = 0; // was "SD path flipped"; wrong-pin recovery removed with cable detection
     const uint16_t staged = g_proxy.stagedTx;
     pkt[12] = static_cast<uint8_t>(staged);
     pkt[13] = static_cast<uint8_t>(staged >> 8);
@@ -66,22 +75,26 @@ BattleChipGateSection::BattleChipGateSection(bcgproto::GateType initialGateType)
     new (&g_proxy) bcgproto::BcgProxy();
     g_proxy.reset(initialGateType);
 
-    link_setLegacyTransmitCallback(&transmitCallback, nullptr);
-    link_setLegacyReceiveCallback(&receiveCallback, nullptr);
+    link_setTransmitCallback(&transmitCallback, nullptr);
+    link_setReceiveCallback(&receiveCallback, nullptr);
 
+    g_rearmRequested = false;
     g_sessionActive = true;
 }
 
 BattleChipGateSection::~BattleChipGateSection()
 {
     g_sessionActive = false;
-    link_setLegacyTransmitCallback(nullptr, nullptr);
-    link_setLegacyReceiveCallback(nullptr, nullptr);
+    g_rearmRequested = false;
+    multiMode_selectMode(DISABLED);
+    link_setTransmitCallback(nullptr, nullptr);
+    link_setReceiveCallback(nullptr, nullptr);
 }
 
 void BattleChipGateSection::armLink()
 {
-    link_configureBattleChipGateSlave();
+    g_rearmRequested = false;
+    multiMode_selectMode(SLAVE);
 }
 
 void BattleChipGateSection::process()
@@ -91,10 +104,19 @@ void BattleChipGateSection::process()
 
     while (!m_cancel)
     {
+        if (g_rearmRequested)
+        {
+            g_rearmRequested = false;
+            const unsigned int key = irq_lock();
+            g_proxy.enterStandby();
+            irq_unlock(key);
+            multiMode_selectMode(SLAVE);
+        }
+
         if (++statusLoops >= kStatusIntervalLoops)
         {
             statusLoops = 0;
-            const uint32_t rx = link_getReceivedWordCount();
+            const uint32_t rx = link_receivedWordCount();
             if (rx != lastReportedRx || rx == 0)
             {
                 lastReportedRx = rx;

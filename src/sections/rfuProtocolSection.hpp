@@ -4,7 +4,7 @@
 
 extern "C"
 {
-    #include "../layers/linkLayer_rfu.h"
+    #include "../layers/link/rfuLinkLayer.h"
 }
 
 #include <zephyr/kernel.h>

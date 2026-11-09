@@ -1,8 +1,5 @@
-#include "layers/usbLayer.hpp"
-#include "layers/serialLayer.hpp"
 #include "layers/transport.hpp"
 #include "layers/packet/packetLayer.hpp"
-#include "layers/link/linkLayer.hpp"
 #include "module/link.hpp"
 #include "module/emu.hpp"
 #include "module/gb.hpp"
@@ -61,7 +58,7 @@ public:
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
         const uint8_t modeVariant = m_modeVariant;
-        if (mode != Mode::gbaLink) link_forgetSdPin();
+
         sendLinkStatus(LinkStatus::DeviceReady);
 
         switch (mode)
@@ -300,7 +297,7 @@ private:
                 break;
             case HardwareCommand::Reboot:
                 // Warm-reboot into the app so persisted settings apply now; no return.
-                Hardware::getInstance().reboot();
+                Hardware::getInstance().reboot(); 
                 break;
             case HardwareCommand::GetRfuIsrStats:
             {

@@ -1,11 +1,11 @@
 
 #pragma once
 
-extern "C"
+enum MultiMode
 {
-    #include "../../linkLayer.h"
-}
+    MASTER,
+    SLAVE,
+    DISABLED
+};
 
-// MASTER, SLAVE and DISABLED are enum LinkMode of linkLayer.h, which the 2 player programs use too.
-
-void multiMode_selectMode(enum LinkMode mode);
+void multiMode_selectMode(enum MultiMode mode);

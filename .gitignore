@@ -6,3 +6,4 @@ build/
 bootloader/
 tools/
 .cache/
+.clangd

@@ -46,10 +46,12 @@ void PacketLayer::onTransiveDone(uint16_t rxBytes, TxValues txValues)
                 m_waitForDisable = 0;
                 k_sem_give(&m_saveToDisableSemaphore);
             }
-            if (m_handler.transmitDone() == CommandState::done)
+            // Runs in the PIO ISR: only flag completion. Replacing m_handler here would
+            // free the command's heap context, and free() takes a k_mutex (asserts in ISR).
+            // The finished command stays alive until the thread's next sendCommand().
+            if (!m_idle && m_handler.transmitDone() == CommandState::done)
             {
                 m_idle = true;
-                m_handler = emptyCommand();
             }
             break;
         
@@ -64,12 +66,7 @@ bool PacketLayer::awaitDisable()
     if (m_seatNumber == 0)
     {
         m_waitForDisable = 1;
-        if (k_sem_take(&m_saveToDisableSemaphore, K_MSEC(100)) == -EAGAIN)
-        {
-            // Stopped on a timeout too: the link callbacks still point at this object.
-            multiMode_selectMode(DISABLED);
-            return false;
-        }
+        if (k_sem_take(&m_saveToDisableSemaphore, K_MSEC(100)) == -EAGAIN) return false;
     }
     
     multiMode_selectMode(DISABLED);

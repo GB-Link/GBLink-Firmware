@@ -22,6 +22,7 @@ enum LedSlot : uint8_t {
 bool landingPageEnabled();
 void setLandingPageEnabled(bool enabled);
 
+
 // Per-mode LED colours (logical RGB, 0-255; the WS2812 driver does GRB packing).
 void getLedColor(uint8_t slot, uint8_t out[3]);
 void setLedColor(uint8_t slot, uint8_t r, uint8_t g, uint8_t b);

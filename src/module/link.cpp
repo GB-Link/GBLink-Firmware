@@ -36,8 +36,10 @@ void LinkModule::receiveCommand(std::span<const uint8_t> command)
     switch (static_cast<LinkModeCommand>(command[0]))
     {
         case LinkModeCommand::SetPlayerSettings:
+
             // [0x10, player count 2-4, seat]; anything else would index past the per-player tables.
             if (command.size() < 3 || command[1] < 2 || command[1] > 4 || command[2] >= command[1]) return;
+
             m_playerCount = command[1];
             m_seatNumber = command[2];
             k_sem_give(&m_waitForLinkModeCommand);            
