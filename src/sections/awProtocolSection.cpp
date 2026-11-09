@@ -28,7 +28,9 @@ static volatile bool g_sessionActive = false;
 
 static struct NextTransmit transmitCallback(void*)
 {
-    return { 0, g_proxy.stagedTx, g_proxy.stagedTiming }; //FIXME
+    // The GBA is player 1 (seat 0) as bus master, else player 2 (seat 1). The slave program ignores the seat.
+    const uint8_t gbaSeat = g_proxy.gbaIsMaster ? 0 : 1;
+    return { gbaSeat, TxValues(g_proxy.stagedTx), g_proxy.stagedTiming };
 }
 
 static void receiveCallback(uint16_t rx, void*)
@@ -99,7 +101,7 @@ AwProtocolSection::~AwProtocolSection()
 {
     g_sessionActive = false;
 
-    // The module disables the link (link_changeMode(DISABLED)) before this
+    // The module disables the link (multiMode_selectMode(DISABLED)) before this
     // destructor runs, so no PIO ISR can race the deregistration below.
     link_setTransmitCallback(nullptr, nullptr);
     link_setReceiveCallback(nullptr, nullptr);

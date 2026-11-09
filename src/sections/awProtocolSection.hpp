@@ -9,7 +9,7 @@
 #pragma once
 
 // Zephyr glue around awproto::AwProxy: PIO link callbacks on the GBA side,
-// MAW1 frame stream over the 64-byte data transport on the network side.
+// MAW1 frame stream over the 51-byte data transport on the network side.
 //
 // The proxy, stream parser, and outbound ring live in file-scope statics
 // (like the section message queues elsewhere in this codebase) so the ISR
@@ -22,7 +22,7 @@
 //   receiveCallback   PIO done-ISR  FSM step + stage next response
 //   emit (via proxy)  PIO done-ISR  serialize frame into the outbound ring
 //   awProto_receiveHandler  USB thread / UART ISR  parse frames, push queue
-//   process()         module thread drain ring → 64-byte chunks → transport
+//   process()         module thread drain ring → 51-byte chunks → transport
 class AwProtocolSection
 {
 public:
@@ -41,8 +41,9 @@ private:
 
     // Transport chunk being filled from the outbound ring. Frames may span
     // chunks; a chunk's unused tail is zero-padded (the remote stream parser
-    // skips padding while seeking the frame magic).
-    uint8_t m_chunk[64];
+    // skips padding while seeking the frame magic). 51 bytes: the Celio client
+    // and server carry data in packets of that size.
+    uint8_t m_chunk[51];
     size_t m_chunkLen = 0;
 };
 

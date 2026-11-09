@@ -77,7 +77,7 @@ struct AwConfig
 };
 
 // PIO master-mode round pacing, in PIO delay-loop iterations (~542.5 ns each,
-// clkdiv 67.816 — see linkLayer_pio.c). Matches gpsp's fake-master rates:
+// clkdiv 67.816 — see gbaLinkLayer.cpp). Matches gpsp's fake-master rates:
 // SLAVE_IRQ_CYCLES_2P (8.3 ms, 2/frame) and SLAVE_IRQ_CYCLES_H (16.7 ms,
 // 1/frame, used in SYNC/INTERSYNC). In slave mode the value is ignored — the
 // parent GBA paces the bus.
@@ -139,7 +139,7 @@ inline size_t maw1Serialize(uint8_t* out, uint16_t cmd, uint8_t state,
 }
 
 // Reassembles MAW1 frames from an arbitrary byte stream (the network path
-// chunks frames into 64-byte transport packets and pads the tail of a chunk
+// chunks frames into 51-byte transport packets and pads the tail of a chunk
 // with zeros; zeros never match the magic, so the parser self-synchronizes).
 class Maw1StreamParser
 {
