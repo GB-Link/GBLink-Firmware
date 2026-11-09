@@ -11,7 +11,6 @@
 
 static bcgproto::BcgProxy g_proxy;
 static volatile bool g_sessionActive = false;
-static volatile bool g_rearmRequested = false;
 
 static constexpr int kStatusIntervalLoops = 50;
 static constexpr int kLoopSleepMs = 10;
@@ -28,12 +27,6 @@ static struct NextTransmit transmitCallback(void*)
 static void receiveCallback(uint16_t rx, void*)
 {
     g_proxy.onRound(rx);
-}
-
-void bcgProto_requestRearm()
-{
-    if (g_sessionActive)
-        g_rearmRequested = true;
 }
 
 void bcgProto_receiveHandler(std::span<const uint8_t> data, void*)
@@ -63,7 +56,7 @@ static void emitStatus()
     pkt[8] = static_cast<uint8_t>(chip);
     pkt[9] = static_cast<uint8_t>(chip >> 8);
     pkt[10] = static_cast<uint8_t>(static_cast<int8_t>(g_proxy.stage));
-    pkt[11] = 0; // was "SD path flipped"; wrong-pin recovery removed with cable detection
+    // pkt[11] stays 0: clients read it as an SD-path flag, and SD is read on both pins.
     const uint16_t staged = g_proxy.stagedTx;
     pkt[12] = static_cast<uint8_t>(staged);
     pkt[13] = static_cast<uint8_t>(staged >> 8);
@@ -78,14 +71,12 @@ BattleChipGateSection::BattleChipGateSection(bcgproto::GateType initialGateType)
     link_setTransmitCallback(&transmitCallback, nullptr);
     link_setReceiveCallback(&receiveCallback, nullptr);
 
-    g_rearmRequested = false;
     g_sessionActive = true;
 }
 
 BattleChipGateSection::~BattleChipGateSection()
 {
     g_sessionActive = false;
-    g_rearmRequested = false;
     multiMode_selectMode(DISABLED);
     link_setTransmitCallback(nullptr, nullptr);
     link_setReceiveCallback(nullptr, nullptr);
@@ -93,7 +84,6 @@ BattleChipGateSection::~BattleChipGateSection()
 
 void BattleChipGateSection::armLink()
 {
-    g_rearmRequested = false;
     multiMode_selectMode(SLAVE);
 }
 
@@ -104,15 +94,6 @@ void BattleChipGateSection::process()
 
     while (!m_cancel)
     {
-        if (g_rearmRequested)
-        {
-            g_rearmRequested = false;
-            const unsigned int key = irq_lock();
-            g_proxy.enterStandby();
-            irq_unlock(key);
-            multiMode_selectMode(SLAVE);
-        }
-
         if (++statusLoops >= kStatusIntervalLoops)
         {
             statusLoops = 0;

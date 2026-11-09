@@ -15,12 +15,6 @@
 class PacketLayer
 {
 public:
-    enum class Mode
-    {
-        master,
-        slave
-    };
-
     struct TransiveResult
     {
         std::span<const uint16_t> received;
@@ -150,9 +144,6 @@ public:
 
        
     }
-
-    uint8_t getSeatNumber() { return m_seatNumber; }
-
 
 private:
 

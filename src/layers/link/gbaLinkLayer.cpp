@@ -50,8 +50,6 @@ static pio_sm_config g_config = {};
 
 static uint32_t g_wordCount = 0;
 
-uint16_t g_lastTxValue = 0x00;
-
 static struct NextTransmit g_nextTransmission = {};
 
 static constexpr uint32_t prepWindowCycles = 304;
@@ -258,10 +256,6 @@ void link_setTransiveDoneCallback(TransiveDoneHandler cb, void* user_data)
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void link_startTransive() {}
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
 void link_disable()
 {
     g_wordCount = 0;
@@ -340,14 +334,6 @@ void link_forgetSdPin()
     g_sdLearning = true;
     g_sdCandidate = 0;
     g_sdPin = 0;
-}
-
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
-void link_setPioPinDirs(uint32_t pin, enum LinkPinDir direction)
-{
-    bool isOut = (direction == PIN_DOR_OUT);
-    pio_sm_set_consecutive_pindirs(g_pio.device, g_pio.id, pin, 1, isOut);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

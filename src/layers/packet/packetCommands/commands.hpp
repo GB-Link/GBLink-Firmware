@@ -1,11 +1,6 @@
 #include "./blockCommand.hpp"
 #include "./emptyCommand.hpp"
-#include "./moveCommand.hpp"
-#include "./blockRequestCommand.hpp"
 #include "./readyExitStandbyCommand.hpp"
 #include "./readyCloseLinkCommand.hpp"
-#include "./sendLinkTypeCommand.hpp"
-#include "./blockCommandRequestCommand.hpp"
-#include "./emptyCommand.hpp"
 #include "./usbLinkCommand.hpp"
 

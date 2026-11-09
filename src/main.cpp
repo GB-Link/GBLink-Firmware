@@ -11,14 +11,6 @@ int main(void)
     {
         g_control.executeMode();
     }
-    
-    // PacketLayer p;
-    // p.configurePlayer(0, 2);
-    // p.enableHandshake();
-    // while (true)
-    // {
-
-    // }
 
     return 0;
 }
