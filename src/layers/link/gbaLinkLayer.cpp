@@ -292,9 +292,11 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
     gpio_pull_up(SD_GBA_pin);
     gpio_pull_up(SD_GBC_pin);
 
-    g_sdLearning = true;
+    // The SD pin learned in an earlier session stays until link_forgetSdPin: a GBA already in its
+    // handshake in seat 2 or 3 does not answer a master that leaves SD released. assignGpioToPio
+    // cleared the pin overrides, so setSdPin applies them again.
     g_sdCandidate = 0;
-    setSdPin(0);
+    setSdPin(g_sdPin);
 
     sm_config_set_set_pins(&g_config, SC_pin, 5);
     sm_config_set_out_pins(&g_config, SD_GBA_pin, 2);
@@ -329,6 +331,15 @@ void link_enableBothSdPins()
 {
     g_sdLearning = false;
     setSdPin(SD_PIN_GP3 | SD_PIN_GP4);
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+void link_forgetSdPin()
+{
+    g_sdLearning = true;
+    g_sdCandidate = 0;
+    g_sdPin = 0;
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//

@@ -64,6 +64,10 @@ void link_configureProgram(const pio_program_t* prgramm, uint32_t warp, uint32_t
 
 void link_enableBothSdPins();
 
+// The link keeps the SD pin learned from the GBA's answers across sessions. Called when the mode changes, which may
+// come with another cable.
+void link_forgetSdPin();
+
 uint32_t link_receivedWordCount();
 
 uint8_t link_readPartnerPins();

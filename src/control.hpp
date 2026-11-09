@@ -58,6 +58,8 @@ public:
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
         const uint8_t modeVariant = m_modeVariant;
+        if (mode != m_previousMode) link_forgetSdPin();
+        m_previousMode = mode;
 
         sendLinkStatus(LinkStatus::DeviceReady);
 
@@ -199,6 +201,7 @@ private:
     struct k_sem m_waitForModeSemaphore;
     Mode m_mode;
     uint8_t m_modeVariant = 0;
+    std::optional<Mode> m_previousMode;
 
     IModule* m_currentModule = nullptr;
 
