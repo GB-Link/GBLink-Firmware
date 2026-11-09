@@ -1,7 +1,6 @@
 #include "layers/transport.hpp"
 #include "layers/packet/packetLayer.hpp"
 #include "module/link.hpp"
-#include "module/emu.hpp"
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
 #include "module/eReader.hpp"
@@ -12,7 +11,6 @@
 #include "sections/rfuProtocolSection.hpp"
 #include "linkStatus.hpp"
 #include "layers/packet/packetCommands/commands.hpp"
-#include "payloads/pokemon.hpp"
 #include "module/moduleInterface.hpp"
 #include "hardware.hpp"
 #include "persist.hpp"
@@ -30,7 +28,6 @@ class Control
 
     enum class Mode
     {
-        gbaTradeEmu = 0x00,
         gbaLink = 0x01,
         gbLink = 0x02,
         gbPrinter = 0x03,
@@ -65,21 +62,6 @@ public:
 
         switch (mode)
         {
-            case Mode::gbaTradeEmu:
-            {
-                applyLedForSlot(LED_SLOT_GBA);
-
-                party::partyInit();
-                Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
-
-                EmuModule emuModule;
-                m_currentModule = &emuModule;
-                emuModule.execute();
-
-                sendLinkStatus(LinkStatus::EmuTradeSessionFinished);
-                break;
-            }
-
             case Mode::gbaLink:
             {
                 applyLedForSlot(LED_SLOT_GBA);

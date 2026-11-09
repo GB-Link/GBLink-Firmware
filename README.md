@@ -28,7 +28,6 @@ Manual update
 
 | Mode | Command | Description |
 |:---|:---|:---|
-| **GBA Trade Emu** | `0x00` | Emulate a GBA link partner for Pokémon Gen 3 trades |
 | **GBA Link** | `0x01` | Link 2 to 4 GBA systems over the internet |
 | **GB Link** | `0x02` | SPI passthrough for Game Boy |
 | **GB Printer** | `0x03` | Game Boy Printer emulation (bit-bang SPI slave) |
@@ -125,7 +124,6 @@ Commands are sent over the WebUSB command endpoint:
 |:---|:---|:---|
 | `0x00–0x0F` | Control | `0x00` SetMode, `0x01` Cancel |
 | `0x10–0x1F` | GBA Link | `0x10` SetPlayerSettings (`[0x10, player count 2–4, seat]`, seat 0 is the GBA that hosts the link), `0x12` StartHandshake, `0x13` ConnectLink. Link data travels as 17-byte packets: the seat, then 8 link words. |
-| `0x20–0x2F` | GBA Emu | *(internal section commands)* |
 | `0x30–0x3F` | GB Link | `0x30` SetTimingConfig, `0x31` EnterPrinter, `0x32` ExitPrinter |
 | `0x40–0x4F` | Hardware | `0x40` Voltage3V3, `0x41` Voltage5V, `0x42` SetLEDColor, `0x43` RebootBootloader, `0x44` SetWebUsbLanding, `0x45` GetLedConfig, `0x46` SetModeLedColor, `0x47` ResetLedColors, `0x48` Reboot, `0x4c` GetRfuIsrStats |
 | `0x44` | SetWebUsbLanding | (`data[1]`: 1 = on, 0 = off) persists whether the adapter advertises the **launcher.gblink.io** WebUSB landing page (the browser "open site" prompt on connect). It's stored in flash and applies on the next reconnect. The current state is reported as a 5th byte in the `0x0F` GetFirmwareInfo response. |

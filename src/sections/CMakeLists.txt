@@ -1,7 +1,3 @@
-zephyr_library_sources(tradeSetup.cpp)
-zephyr_library_sources(tradeConnection.cpp)
-zephyr_library_sources(tradeDisconnected.cpp)
-zephyr_library_sources(tradeLounge.cpp)
 zephyr_library_sources(usbSection.cpp)
 zephyr_library_sources(awProtocolSection.cpp)
 zephyr_library_sources(eReaderProtocolSection.cpp)

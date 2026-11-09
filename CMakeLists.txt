@@ -44,6 +44,5 @@ zephyr_code_relocate(FILES src/layers/link/rfuLinkLayer.c src/sections/rfuProtoc
                      LOCATION RAM_TEXT)
 
 add_subdirectory(src/layers)
-add_subdirectory(src/payloads)
 add_subdirectory(src/sections)
 add_subdirectory(src/module)
