@@ -66,7 +66,12 @@ bool PacketLayer::awaitDisable()
     if (m_seatNumber == 0)
     {
         m_waitForDisable = 1;
-        if (k_sem_take(&m_saveToDisableSemaphore, K_MSEC(100)) == -EAGAIN) return false;
+        if (k_sem_take(&m_saveToDisableSemaphore, K_MSEC(100)) == -EAGAIN)
+        {
+            // Stopped on a timeout too: the link callbacks still point at this object.
+            multiMode_selectMode(DISABLED);
+            return false;
+        }
     }
     
     multiMode_selectMode(DISABLED);
