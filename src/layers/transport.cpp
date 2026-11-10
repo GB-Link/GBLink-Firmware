@@ -40,4 +40,12 @@ namespace Transport
         if (g_active == Id::BridgeUart) return SerialLayer::getBridgeInstance().sendData(data);
         return UsbLayer::getInstance().sendData(data);
     }
+
+    bool trySendData(std::span<const uint8_t> data)
+    {
+        // The serial layers queue frames in a ring and never wait anyway.
+        if (g_active == Id::Serial) return SerialLayer::getInstance().sendData(data);
+        if (g_active == Id::BridgeUart) return SerialLayer::getBridgeInstance().sendData(data);
+        return UsbLayer::getInstance().trySendData(data);
+    }
 }

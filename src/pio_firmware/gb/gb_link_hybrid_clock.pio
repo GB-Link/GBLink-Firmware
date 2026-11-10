@@ -1,0 +1,27 @@
+; Game Boy link, hybrid: the adapter clocks one byte on its turn; the Game Boy's turns run on the
+; passive program. set pins: SCK (GPIO 0), out pins: SOUT, in pins: SIN, both shifting MSB first.
+; The CPU starts this program after each byte the Game Boy clocked, and once it has a byte to send
+; puts the TX word [cycles to wait / 32 : 24 bits][byte : 8 bits]. SCK is driven only while the
+; byte is clocked and is let go while high. Clock divider 3: a bit takes 43 cycles, about 1 µs.
+
+.program gb_link_hybrid_clock
+
+    pull block
+    out x, 24
+gap:
+    jmp x-- gap [31]                ; the Game Boy needs time to get ready for the byte
+    set pins, 1                     ; SCK high before it is driven, so taking it over is not an edge
+    set pindirs, 1
+    set x, 7
+bitloop:
+    out pins, 1
+    set pins, 0 [19]                ; falling edge
+    in pins, 1                      ; the Game Boy's bit, read before the rising edge: well within
+                                    ; half a µs after it, the Game Boy can already be on its next bit
+    set pins, 1 [19]                ; rising edge: the Game Boy reads ours
+    jmp x-- bitloop
+    set pindirs, 0                  ; SCK goes back to the Game Boy, high
+    push noblock
+    irq 2                           ; CPU: read the byte, hand the Game Boy its turn
+park:
+    jmp park

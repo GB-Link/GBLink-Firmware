@@ -5,47 +5,149 @@
 #include "../layers/usbLayer.hpp"
 #include "../layers/transport.hpp"
 #include "../layers/link/gbaLinkLayer.hpp"
+#include "../sections/gbProtocol.hpp"
+#include "../sections/gbPrinter.hpp"
+
+#include <algorithm>
+#include <cstring>
 
 extern "C"
 {
     #include "../layers/link/gbLinkLayer.h"
-    #include "hardware/gpio.h"
     #include "hardware/timer.h"
 }
-
-// --- Pin Definitions ---
-#define PIN_SCK  0
-#define PIN_SIN  1
-#define PIN_SOUT 2
-#define PIN_SD   3
 
 // Max bytes per single USB transfer
 static constexpr uint8_t MAX_TRANSFER_BYTES = 0x40;
 
-// --- Shared state for USB data reception ---
-static uint8_t g_rxBuf[MAX_TRANSFER_BYTES * 2];
-static uint32_t g_rxCount = 0;
-static bool g_dataReady = false;
+// Data packets and the link's commands from the host, in order, so the host can send several without
+// waiting for the answers, and a command acts between the packets around it. When all are taken, newer
+// ones are dropped.
+struct HostPacket
+{
+    bool command;
+    uint8_t length;
+    uint8_t data[MAX_TRANSFER_BYTES * 2];
+};
+K_MSGQ_DEFINE(g_hostPackets, sizeof(HostPacket), 24, 1);
+
+// Answers for the host, in order, each sent once the host has taken the one before, so a host that
+// reads late never holds up the link. When this is full, newer answers are dropped.
+struct HostReply
+{
+    uint8_t length;
+    uint8_t data[MAX_TRANSFER_BYTES];
+};
+K_MSGQ_DEFINE(g_hostReplies, sizeof(HostReply), 24, 1);
+
+// Wakes the mode's loop: a host packet, bytes for the host from the Game Boy, a sub-mode change.
+K_SEM_DEFINE(g_wake, 0, 1);
+
+struct IrqGuard
+{
+    unsigned int key = irq_lock();
+    ~IrqGuard() { irq_unlock(key); }
+};
+
+static gbproto::Link<IrqGuard> g_link;
+static gbprinter::Printer g_printer;
+
+// Passive mode also checks this often for answers to send and for a stuck transfer.
+static constexpr k_timeout_t passivePoll = K_MSEC(10);
+
+// A byte the Game Boy started but did not finish within this time leaves the passive program out of step.
+static constexpr uint32_t passiveStallMs = 1000;
+
+// The printer gets back in step sooner: a game that keeps asking for the printer leaves only short gaps.
+static constexpr uint32_t printerStallMs = 20;
+
+// A packet the Game Boy stopped sending for this long is dropped.
+static constexpr int64_t printerAbortMs = 100;
+
+// While the host has not taken earlier data yet, check this often whether it has.
+static constexpr k_timeout_t hostPoll = K_MSEC(1);
+
+static uint8_t passiveTransfer(uint8_t received)
+{
+    const size_t forHost = g_link.bytesForHost();
+    const uint8_t next = g_link.onPassiveTransfer(received);
+    if (g_link.bytesForHost() != forHost) k_sem_give(&g_wake);
+    return next;
+}
+
+static int hybridTransfer(uint8_t received, bool clocked)
+{
+    const size_t forHost = g_link.bytesForHost();
+    const int next = g_link.onHybridTransfer(received, clocked);
+    if (g_link.bytesForHost() != forHost) k_sem_give(&g_wake);
+    return next;
+}
+
+// Hybrid: the adapter's turn may have been waiting for the bytes just queued.
+static void resumeHybrid()
+{
+    IrqGuard guard;
+    const int next = g_link.resumeHybrid();
+    if (next >= 0) gb_link_hybrid_clock(static_cast<uint8_t>(next));
+}
+
+static uint8_t printerTransfer(uint8_t received)
+{
+    const size_t forHost = g_printer.bytesForHost();
+    const uint8_t next = g_printer.onByte(received);
+    if (g_printer.bytesForHost() != forHost) k_sem_give(&g_wake);
+    return next;
+}
+
+static void queueReply(const uint8_t* data, size_t length)
+{
+    HostReply reply;
+    for (size_t sent = 0; sent < length; sent += reply.length)
+    {
+        reply.length = static_cast<uint8_t>(std::min(length - sent, sizeof(reply.data)));
+        std::memcpy(reply.data, data + sent, reply.length);
+        k_msgq_put(&g_hostReplies, &reply, K_NO_WAIT);
+    }
+}
+
+// The answers first, then in regular passive mode the Game Boy's bytes. False while the host has not
+// taken earlier data yet.
+static bool sendToHost()
+{
+    HostReply reply;
+    while (k_msgq_peek(&g_hostReplies, &reply) == 0)
+    {
+        if (!Transport::trySendData(std::span<const uint8_t>(reply.data, reply.length))) return false;
+        k_msgq_get(&g_hostReplies, &reply, K_NO_WAIT);
+    }
+
+    uint8_t bytes[MAX_TRANSFER_BYTES];
+    size_t count;
+    while ((count = g_link.peekStream(bytes, sizeof(bytes))) > 0)
+    {
+        if (!Transport::trySendData(std::span<const uint8_t>(bytes, count))) return false;
+        g_link.dropStream(count);
+    }
+    return true;
+}
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 // USB Data Handler
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
-void GBModule::usbDataHandler(std::span<const uint8_t> data, void* userData)
+// Runs on a USB thread or the bridge UART's receive thread, neither of which may wait here.
+static void queueHostPacket(std::span<const uint8_t> data, bool command)
 {
-    // Copy received data into shared buffer
-    uint32_t count = data.size();
-    if (count > sizeof(g_rxBuf)) count = sizeof(g_rxBuf);
-    
-    for (uint32_t i = 0; i < count; i++) {
-        g_rxBuf[i] = data[i];
-    }
-    g_rxCount = count;
-    g_dataReady = true;
-    
-    // Signal the main loop that data is available
-    GBModule* self = static_cast<GBModule*>(userData);
-    k_sem_give(&self->m_dataSemaphore);
+    HostPacket packet;
+    packet.command = command;
+    packet.length = static_cast<uint8_t>(std::min(data.size(), sizeof(packet.data)));
+    std::memcpy(packet.data, data.data(), packet.length);
+    if (k_msgq_put(&g_hostPackets, &packet, K_NO_WAIT) == 0) k_sem_give(&g_wake);
+}
+
+void GBModule::usbDataHandler(std::span<const uint8_t> data, void*)
+{
+    queueHostPacket(data, false);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -61,19 +163,10 @@ void GBModule::receiveCommand(std::span<const uint8_t> command)
 {
     switch (static_cast<GBCommand>(command[0]))
     {
-        case GBCommand::SetTimingConfig:
-            if (command.size() >= 5) {
-                m_usBetweenTransfer = (command[1] << 0) | (command[2] << 8) | (command[3] << 16);
-                m_bytesPerTransfer = command[4];
-                if (m_bytesPerTransfer > MAX_TRANSFER_BYTES)
-                    m_bytesPerTransfer = MAX_TRANSFER_BYTES;
-            }
-            break;
-
         case GBCommand::EnterPrinterMode:
             m_subMode = SubMode::printer;
             // Signal the normal mode loop to exit so we can switch
-            k_sem_give(&m_dataSemaphore);
+            k_sem_give(&g_wake);
             break;
 
         case GBCommand::ExitPrinterMode:
@@ -81,6 +174,8 @@ void GBModule::receiveCommand(std::span<const uint8_t> command)
             break;
 
         default:
+            // The link's own commands take their turn with the data packets (gbproto::Command)
+            queueHostPacket(command, true);
             break;
     }
 }
@@ -89,7 +184,7 @@ void GBModule::cancel()
 {
     m_cancel = true;
     m_subMode = SubMode::normal;
-    k_sem_give(&m_dataSemaphore);
+    k_sem_give(&g_wake);
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
@@ -99,12 +194,18 @@ void GBModule::cancel()
 void GBModule::execute()
 {
     m_cancel = false;
+    k_sem_reset(&g_wake);
+    k_msgq_purge(&g_hostPackets);
+    k_msgq_purge(&g_hostReplies);
+    g_link.reset();
 
     // Disable GBA PIO link before initializing GB SPI
     link_disable();
 
     // Initialize GB 8-bit SPI PIO on pio0
     gb_link_init();
+    gb_link_set_passive_handler(passiveTransfer);
+    gb_link_set_hybrid_handler(hybridTransfer);
 
     applyLedForSlot(LED_SLOT_GBC); // GB/GBC mode
 
@@ -123,15 +224,13 @@ void GBModule::execute()
             case SubMode::printer:
                 sendLinkStatus(LinkStatus::GBPrinterModeActive);
                 applyLedForSlot(LED_SLOT_PRINTER); // printer sub-mode
-                
-                // Disable PIO SPI for GPIO bit-bang printer mode
-                gb_link_deinit();
-                
+
                 printerModeLoop();
-                
-                // Re-enable PIO SPI
-                gb_link_init();
-                
+
+                gb_link_set_passive_handler(passiveTransfer);
+                gb_link_set_passive(false, 0);
+                g_link.returnToActive();
+
                 applyLedForSlot(LED_SLOT_GBC); // back to GB mode
                 m_subMode = SubMode::normal;
                 sendLinkStatus(LinkStatus::GBModeActive);
@@ -147,7 +246,6 @@ void GBModule::execute()
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 // Execute Printer Mode — Direct entry point for printer-only operation
-// Skips PIO SPI init entirely since printer uses GPIO bit-bang
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 void GBModule::executePrinterMode()
@@ -155,10 +253,11 @@ void GBModule::executePrinterMode()
     m_cancel = false;
     m_subMode = SubMode::printer;
 
+    k_sem_reset(&g_wake);
+
     // Disable GBA PIO link (free pio0 resources)
     link_disable();
-
-    // No gb_link_init() — printer mode uses GPIO bit-bang, not PIO SPI
+    gb_link_init();
 
     applyLedForSlot(LED_SLOT_PRINTER); // printer mode
 
@@ -166,333 +265,169 @@ void GBModule::executePrinterMode()
 
     printerModeLoop();
 
+    gb_link_deinit();
+
     applyLedForSlot(LED_SLOT_IDLE); // connected, no active mode
 }
 
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-// Normal SPI Passthrough Mode
-// Ported from handle_input_data() in gb-link-firmware-reconfigurable/main.c
+// The Game Boy link protocol (sections/gbProtocol.hpp)
+// Active: the adapter clocks each data packet out. Passive: the Game Boy clocks, the adapter answers
+// from the bytes the host queued and sends the Game Boy's answers back as they arrive. Hybrid: the
+// Game Boy and the adapter take turns clocking, one queued byte each.
+// Either way the host never has to wait for an answer before sending more, nor read one right away.
 //-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
 
 void GBModule::normalModeLoop()
 {
+    k_timeout_t wait = K_NO_WAIT;
     while (!m_cancel && m_subMode == SubMode::normal)
     {
-        // Wait for USB data
-        k_sem_take(&m_dataSemaphore, K_FOREVER);
-        
-        if (m_cancel || m_subMode != SubMode::normal) break;
-        if (!g_dataReady) continue;
-        g_dataReady = false;
+        k_sem_take(&g_wake, wait);
 
-        uint32_t count = g_rxCount;
-        if (count == 0) continue;
-
-        // Zero-fill remainder of buffer (matching reconfigurable firmware behavior)
-        for (uint32_t i = count; i < (MAX_TRANSFER_BYTES * 2); i++) {
-            g_rxBuf[i] = 0;
+        HostPacket packet;
+        while (!m_cancel && m_subMode == SubMode::normal
+               && k_msgq_get(&g_hostPackets, &packet, K_NO_WAIT) == 0)
+        {
+            if (packet.command) handleCommand(packet.data, packet.length);
+            else handleHostData(packet.data, packet.length);
+            sendToHost();
         }
 
-        // Perform SPI transfer: send data to Game Boy, receive response
-        uint8_t txBuf[MAX_TRANSFER_BYTES * 2];
-        uint8_t rxBuf[MAX_TRANSFER_BYTES * 2];
-        
-        for (uint32_t i = 0; i < count; i++) {
-            txBuf[i] = g_rxBuf[i];
-        }
+        if (!g_link.active()) gb_link_check_passive_stall(passiveStallMs);
 
-        // Transfer in chunks matching bytes_per_transfer setting
-        // Match old firmware: delay AFTER EVERY chunk including the last
-        uint32_t totalProcessed = 0;
-        while (totalProcessed < count) {
-            uint32_t transferable = m_bytesPerTransfer;
-            if (count - totalProcessed < transferable) {
-                transferable = count - totalProcessed;
-            }
-            
-            gb_link_transfer(txBuf + totalProcessed, rxBuf + totalProcessed, 
-                           transferable, 0);
-            totalProcessed += transferable;
-
-            // Delay after EVERY chunk (matches old firmware exactly)
-            if (m_usBetweenTransfer > 0) {
-                busy_wait_us(m_usBetweenTransfer);
-            }
-        }
-
-        // Send response back via the active transport
-        Transport::sendData(std::span<const uint8_t>(rxBuf, totalProcessed));
+        if (!sendToHost()) wait = hostPoll;
+        else wait = g_link.active() ? K_FOREVER : passivePoll;
     }
 }
 
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-// Printer Mode — GPIO bit-bang SPI slave with protocol handling
-// Ported from printer_mode_loop() in gb-link-firmware-reconfigurable/main.c
-//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
-
-// Printer protocol states
-enum PrinterState {
-    GB_WAIT_FOR_SYNC_1,
-    GB_WAIT_FOR_SYNC_2,
-    GB_COMMAND,
-    GB_COMPRESSION_INDICATOR,
-    GB_LEN_LOWER,
-    GB_LEN_HIGHER,
-    GB_DATA,
-    GB_CHECKSUM_1,
-    GB_CHECKSUM_2,
-    GB_SEND_DEVICE_ID,
-    GB_SEND_STATUS
-};
-
-void GBModule::printerModeLoop()
+void GBModule::handleHostData(const uint8_t* data, size_t count)
 {
-    // Reconfigure pins for GPIO bit-bang mode (SPI slave)
-    gpio_init(PIN_SCK);
-    gpio_init(PIN_SIN);
-    gpio_init(PIN_SOUT);
-
-    gpio_set_dir(PIN_SCK, GPIO_IN);
-    gpio_set_dir(PIN_SIN, GPIO_IN);
-    gpio_set_dir(PIN_SOUT, GPIO_OUT);
-    gpio_put(PIN_SOUT, 0);
-
-    // Bit-level variables
-    uint8_t received_data = 0;
-    uint8_t received_bits = 0;
-    uint8_t send_data = 0x00;
-    bool bit_synced = false;
-
-    // Protocol state machine
-    PrinterState state = GB_WAIT_FOR_SYNC_1;
-    uint8_t command = 0;
-    uint16_t length = 0;
-    uint16_t data_count = 0;
-    uint8_t printer_status = 0x00;  // 0x00 = OK, ready
-
-    // Timeout for disconnection detection
-    uint32_t idle_count = 0;
-    const uint32_t IDLE_TIMEOUT = 10000000;
-    const uint32_t PRINT_ABORT_TIMEOUT = 2000000;
-
-    // --- USB send buffer ---
-    // WebUSB keeps its original behaviour: bytes flush in 64-byte chunks
-    // mid-packet and again at every protocol-packet boundary, so the host
-    // sees a continuous stream.
-    //
-    // WebSerial defers all sending until PRINT (0x02) is received. The
-    // bit-bang loop gets zero IRQ contention from USB during image capture,
-    // so SIN sampling stays clean. At PRINT, the whole accumulated image
-    // ships in one burst during the GB's natural post-PRINT pause.
-    //
-    // Buffer sized to hold a full 9-strip image plus protocol overhead.
-    static uint8_t usbBuf[16384];
-    uint16_t usbBufPos = 0;
-
-    auto flushUsbBuf = [&]() {
-        if (usbBufPos == 0) return;
-        // Chunk into 64-byte sends (transport per-call cap), retrying with
-        // yields per chunk so the consumer can drain.
-        uint16_t sent = 0;
-        while (sent < usbBufPos) {
-            uint16_t chunk = (usbBufPos - sent) > 64 ? 64 : (usbBufPos - sent);
-            bool ok = false;
-            for (int attempt = 0; attempt < 20; attempt++) {
-                if (Transport::sendData(
-                        std::span<const uint8_t>(usbBuf + sent, chunk))) {
-                    ok = true;
-                    break;
-                }
-                k_yield();
-            }
-            if (!ok) break;
-            sent += chunk;
-            k_yield();
-        }
-        usbBufPos = 0;
-    };
-
-    auto bufferUsbByte = [&](uint8_t b) {
-        if (usbBufPos < sizeof(usbBuf)) {
-            usbBuf[usbBufPos++] = b;
-        }
-        // USB streams every 64 bytes as before. WebSerial accumulates the
-        // whole image and flushes once at PRINT to keep IRQs off the
-        // bit-bang loop during clocking.
-        if (usbBufPos >= 64 && Transport::active() == Transport::Id::Usb) {
-            flushUsbBuf();
-        }
-    };
-
-    // Send start marker to web app
-    usbBuf[0] = 0xFF;
-    usbBufPos = 1;
-    flushUsbBuf();
-
-    while (m_subMode == SubMode::printer && !m_cancel)
+    if (count == 0) return;
+    if (g_link.active())
     {
-        // Wait for clock to go low (with timeout)
-        idle_count = 0;
-        uint32_t timeout = (state != GB_WAIT_FOR_SYNC_1 && state != GB_WAIT_FOR_SYNC_2)
-                           ? PRINT_ABORT_TIMEOUT : IDLE_TIMEOUT;
+        transferActive(data, count);
+        return;
+    }
+    g_link.queueHostData(data, count);
+    if (g_link.hybrid()) resumeHybrid();
+}
 
-        while (gpio_get(PIN_SCK)) {
-            idle_count++;
-            if (idle_count > timeout) {
-                if (m_cancel || m_subMode != SubMode::printer) {
-                    goto exit_printer;
-                }
+void GBModule::handleCommand(const uint8_t* data, size_t count)
+{
+    gbproto::Reply reply;
+    switch (g_link.command(data, count, reply))
+    {
+        case gbproto::Action::switchToActive:
+            gb_link_set_passive(false, 0);
+            break;
 
-                if (state != GB_WAIT_FOR_SYNC_1 && state != GB_WAIT_FOR_SYNC_2) {
-                    state = GB_WAIT_FOR_SYNC_1;
-                    bit_synced = false;
-                    received_data = 0;
-                    received_bits = 0;
-                    send_data = 0x00;
-                    usbBufPos = 0;
-                    const char* abort_marker = "ABORTPRINT";
-                    Transport::sendData(
-                        std::span<const uint8_t>(
-                            reinterpret_cast<const uint8_t*>(abort_marker), 10));
-                    k_yield();
-                    break;
-                }
+        case gbproto::Action::switchToPassive:
+            gb_link_set_passive(true, g_link.idleByte());
+            break;
 
-                idle_count = 0;
-                k_yield();
-            }
+        case gbproto::Action::restartPassive:
+            gb_link_restart_passive(g_link.idleByte());
+            break;
+
+        case gbproto::Action::startHybrid:
+        {
+            IrqGuard guard;
+            gb_link_start_hybrid(g_link.hybridGapUs(), g_link.hybridGameBoyFirst(), g_link.idleByte());
+            g_link.startHybrid();
+            break;
         }
 
-        // Clock is LOW — output our bit (LSB first)
-        gpio_put(PIN_SOUT, send_data & 0x1);
-        send_data = send_data >> 1;
+        case gbproto::Action::reply:
+        case gbproto::Action::none:
+            break;
+    }
 
-        // Wait for clock to go high
-        while (!gpio_get(PIN_SCK)) {}
+    if (reply.length) queueReply(reply.data, reply.length);
+}
 
-        // Clock is HIGH — sample input bit (MSB first)
-        received_data = (received_data << 1) | (gpio_get(PIN_SIN) & 0x1);
+void GBModule::transferActive(const uint8_t* data, size_t count)
+{
+    // Perform SPI transfer: send data to Game Boy, receive response
+    uint8_t rxBuf[MAX_TRANSFER_BYTES * 2];
 
-        // Bit sync detection — look for 0x88 pattern
-        if (!bit_synced) {
-            if (received_data != 0x88) {
-                continue;
-            } else {
-                received_bits = 8;
-                bit_synced = true;
-            }
-        } else {
-            received_bits++;
+    // Transfer in chunks matching bytes_per_transfer setting
+    // Match old firmware: delay AFTER EVERY chunk including the last
+    const uint32_t bytesPerTransfer = g_link.bytesPerTransfer();
+    const uint32_t usBetweenTransfer = g_link.usBetweenTransfer();
+    uint32_t totalProcessed = 0;
+    while (totalProcessed < count) {
+        uint32_t transferable = bytesPerTransfer;
+        if (count - totalProcessed < transferable) {
+            transferable = count - totalProcessed;
         }
 
-        // Check if we have a complete byte
-        if (received_bits != 8) {
-            continue;
-        }
+        gb_link_transfer(data + totalProcessed, rxBuf + totalProcessed,
+                       transferable, 0);
+        totalProcessed += transferable;
 
-        // We have a complete byte — process it
-        uint8_t byte = received_data;
-        received_data = 0;
-        received_bits = 0;
-
-        // Protocol state machine
-        switch (state) {
-            case GB_WAIT_FOR_SYNC_1:
-                if (byte == 0x88) {
-                    state = GB_WAIT_FOR_SYNC_2;
-                }
-                send_data = 0x00;
-                break;
-
-            case GB_WAIT_FOR_SYNC_2:
-                if (byte == 0x33) {
-                    state = GB_COMMAND;
-                } else {
-                    state = GB_WAIT_FOR_SYNC_1;
-                    bit_synced = false;
-                }
-                send_data = 0x00;
-                break;
-
-            case GB_COMMAND:
-                command = byte;
-                state = GB_COMPRESSION_INDICATOR;
-                send_data = 0x00;
-                bufferUsbByte(byte);
-                break;
-
-            case GB_COMPRESSION_INDICATOR:
-                state = GB_LEN_LOWER;
-                send_data = 0x00;
-                bufferUsbByte(byte);
-                break;
-
-            case GB_LEN_LOWER:
-                length = byte;
-                state = GB_LEN_HIGHER;
-                send_data = 0x00;
-                break;
-
-            case GB_LEN_HIGHER:
-            {
-                length |= ((uint16_t)byte << 8);
-                data_count = 0;
-
-                if (length > 0) {
-                    state = GB_DATA;
-                } else {
-                    state = GB_CHECKSUM_1;
-                }
-                send_data = 0x00;
-
-                bufferUsbByte(static_cast<uint8_t>(length & 0xFF));
-                bufferUsbByte(static_cast<uint8_t>((length >> 8) & 0xFF));
-                break;
-            }
-
-            case GB_DATA:
-                data_count++;
-                bufferUsbByte(byte);
-                if (data_count >= length) {
-                    state = GB_CHECKSUM_1;
-                }
-                send_data = 0x00;
-                break;
-
-            case GB_CHECKSUM_1:
-                state = GB_CHECKSUM_2;
-                send_data = 0x00;
-                break;
-
-            case GB_CHECKSUM_2:
-                state = GB_SEND_DEVICE_ID;
-                send_data = 0x81;  // Printer device ID
-                break;
-
-            case GB_SEND_DEVICE_ID:
-                state = GB_SEND_STATUS;
-                send_data = printer_status;  // 0x00 = OK
-                break;
-
-            case GB_SEND_STATUS:
-                state = GB_WAIT_FOR_SYNC_1;
-                bit_synced = false;
-                send_data = 0x00;
-
-                if (command == 0x02) {  // PRINT command
-                    bufferUsbByte(0xFE);  // Print marker
-                    flushUsbBuf();        // Always flush at PRINT (both transports)
-                } else if (Transport::active() == Transport::Id::Usb) {
-                    // WebUSB: original behaviour, flush at every protocol packet.
-                    flushUsbBuf();
-                }
-                // WebSerial + non-PRINT: keep accumulating in usbBuf.
-                break;
+        // Delay after EVERY chunk (matches old firmware exactly)
+        if (usBetweenTransfer > 0) {
+            busy_wait_us(usBetweenTransfer);
         }
     }
 
-exit_printer:
-    // Flush any remaining buffered data
-    flushUsbBuf();
-    return;
+    queueReply(rxBuf, totalProcessed);
+}
+
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+// Printer Mode: the Game Boy prints through the passive program, and the printer (sections/gbPrinter.hpp)
+// answers in its interrupt. The host gets the forwarded packets as they arrive.
+//-////////////////////////////////////////////////////////////////////////////////////////////////////////-//
+
+// False while the host has not taken earlier data yet.
+static bool sendPrinterData()
+{
+    uint8_t bytes[MAX_TRANSFER_BYTES];
+    size_t count;
+    while ((count = g_printer.peekForHost(bytes, sizeof(bytes))) > 0)
+    {
+        if (!Transport::trySendData(std::span<const uint8_t>(bytes, count))) return false;
+        g_printer.dropForHost(count);
+    }
+    return true;
+}
+
+void GBModule::printerModeLoop()
+{
+    {
+        IrqGuard guard;
+        g_printer.start();
+    }
+    gb_link_set_passive_handler(printerTransfer);
+    gb_link_restart_passive(0x00);
+
+    uint32_t lastCount = g_printer.bytesSeen();
+    int64_t lastByteAt = k_uptime_get();
+    k_timeout_t wait = K_NO_WAIT;
+    while (!m_cancel && m_subMode == SubMode::printer)
+    {
+        k_sem_take(&g_wake, wait);
+
+        const uint32_t count = g_printer.bytesSeen();
+        const int64_t now = k_uptime_get();
+        if (count != lastCount)
+        {
+            lastCount = count;
+            lastByteAt = now;
+        }
+        else if (g_printer.midPacket() && now - lastByteAt >= printerAbortMs)
+        {
+            {
+                IrqGuard guard;
+                g_printer.abort();
+            }
+            gb_link_restart_passive(0x00);
+            lastByteAt = now;
+        }
+        gb_link_check_passive_stall(printerStallMs);
+
+        wait = sendPrinterData() ? passivePoll : hostPoll;
+    }
+    sendPrinterData();
 }

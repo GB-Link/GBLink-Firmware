@@ -26,4 +26,8 @@ namespace Transport
     // Route a send to whichever transport the host last spoke on.
     bool sendStatus(std::span<const uint8_t, 2> data);
     bool sendData(std::span<const uint8_t> data);
+
+    // Like sendData, but never waits: false while the host has not taken
+    // earlier data yet, so the caller keeps the data and tries again later.
+    bool trySendData(std::span<const uint8_t> data);
 }

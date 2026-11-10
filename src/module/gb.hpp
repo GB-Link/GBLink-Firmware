@@ -8,11 +8,6 @@
 class GBModule : public IModule
 {
 public:
-    GBModule()
-    {
-        k_sem_init(&m_dataSemaphore, 0, 1);
-    }
-
     void execute();
     void executePrinterMode();
     void cancel() override;
@@ -20,9 +15,9 @@ public:
     void receiveCommand(std::span<const uint8_t> command) override;
 
 private:
+    // The printer sub-mode; the link's own commands are gbproto::Command (sections/gbProtocol.hpp)
     enum class GBCommand : uint8_t
     {
-        SetTimingConfig = 0x30,
         EnterPrinterMode = 0x31,
         ExitPrinterMode = 0x32,
     };
@@ -32,16 +27,13 @@ private:
     bool m_cancel = false;
     SubMode m_subMode = SubMode::normal;
 
-    // Timing config (defaults match reconfigurable firmware)
-    uint8_t m_bytesPerTransfer = 1;
-    uint32_t m_usBetweenTransfer = 1000;
-
-    struct k_sem m_dataSemaphore;
-
-    // --- Normal SPI passthrough ---
+    // --- Normal mode: the Game Boy link protocol (sections/gbProtocol.hpp) ---
     void normalModeLoop();
+    void handleHostData(const uint8_t* data, size_t count);
+    void handleCommand(const uint8_t* data, size_t count);
+    void transferActive(const uint8_t* data, size_t count);
 
-    // --- Printer mode (GPIO bit-bang SPI slave) ---
+    // --- Printer mode: the Game Boy prints through the passive program (sections/gbPrinter.hpp) ---
     void printerModeLoop();
 
     // --- USB data handler ---
