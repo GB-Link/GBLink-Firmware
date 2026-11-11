@@ -4,33 +4,41 @@
 
 #pragma once
 
-// Advance Wars 1/2 VS-link protocol proxy.
+// Advance Wars 1/2 VS-link protocol proxy, for two to four players.
 //
-// Port of gpsp's working netplay implementation (gpsp/serial_proto.c,
-// serialaw_* functions). Instead of relaying raw link words (which breaks as
-// soon as the network adds latency — the GBA expects protocol-correct answers
-// every round), each adapter runs this proxy: it impersonates the remote GBA
-// locally, answering every MULTI-mode round immediately from its own state,
-// and exchanges only whole protocol packets ("MAW1" frames) asynchronously
-// over USB → web client → Celio-Server. The games tolerate multi-second waits
-// at the packet level (they poll), so network latency only delays packets,
-// never corrupts the wire protocol.
+// The games expect a protocol-correct word from every player in every
+// transfer, so the words can't be relayed over a network. Each adapter runs
+// this proxy instead: it stands in for the other players' GBAs, answering
+// every transfer at once from what it knows of them, and exchanges only whole
+// packets and key presses ("MAW1" frames, the format of gpsp's netplay) over
+// USB → web client → Celio-Server. The games poll at that level, so network
+// latency delays them but never breaks a transfer.
 //
-// The protocol has three phases, driven entirely by the local GBA's words:
-//   PACKETXG  - variable-length packet exchange (incl. the save-name exchange
-//               at link start; no special handling needed, names are packets)
-//   SYNC      - barrier: both sides repeat the variant sync word until each
-//               has seen the other side reach SYNC
-//   INTERSYNC - realtime key exchange (words 0x8000-0x9F00, bursts terminated
-//               by a word with low 10 bits clear)
+// The local GBA's words drive three phases:
+//   PACKETXG  - packets: the names when the link starts, the settings and a
+//               match's moves
+//   SYNC      - barrier: every GBA repeats the variant's sync word until all
+//               players have reached it
+//   INTERSYNC - the players' keys on the screens they go through together
+//               (words 0x8000-0x9F00: the low 10 bits are the keys, so a
+//               press is a run of words ending with one whose low 10 bits
+//               are clear)
 //
-// This header is deliberately Zephyr-free so the FSM and framing can be
-// compiled and tested on the host. Concurrency contract (enforced by the
-// caller, see awProtocolSection):
-//   - onRound() is the only writer of FSM/replay-pop state (PIO done-ISR).
-//   - applyNetFrame() pushes to the replay queue (USB thread or UART ISR);
-//     the caller must hold irq_lock() around it so it cannot interleave with
-//     an onRound() pop.
+// The rules follow the games' own code:
+//   - A packet is 0x4FFF, a size up to 0x80, one checksum word (two in
+//     Advance Wars 2) and as many data words as the size says. A start word
+//     followed by a larger size is no packet: a game that drops what it was
+//     about to send leaves a start word that only idle words follow.
+//   - In the key exchange a game's logic runs once per transfer, on the words
+//     of all players. A transfer with a word that is no key word in any slot
+//     counts for nobody, so the other players' slots always carry one.
+//
+// This header is Zephyr-free so the proxy and the framing can be compiled and
+// tested on the host. Concurrency contract (see awProtocolSection):
+//   - onRound() runs in the PIO done-ISR and is the only writer of the proxy's
+//     own state and of the queues' read side.
+//   - applyNetFrame() appends to a queue (USB thread or UART ISR); the caller
+//     holds irq_lock() around it so it cannot interleave with onRound().
 //   - stagedTx/stagedTiming are written by onRound(), read by the PIO tx-ISR.
 
 namespace awproto
@@ -39,9 +47,12 @@ namespace awproto
 constexpr uint16_t CMD_NONE = 0x7FFF;
 constexpr uint16_t CMD_NOP  = 0x5FFF;
 
-// "MAW1" — gpsp's netpacket magic (serial_proto.c:400). Keeping the frame
-// format byte-compatible with gpsp keeps a future hardware↔emulator bridge
-// possible without firmware changes.
+constexpr uint16_t packetStart = 0x4FFF;
+constexpr int16_t  maxPacketSize = 0x80;
+
+constexpr uint8_t maxPeers = 3;
+
+// "MAW1", the magic of gpsp's netpackets (serial_proto.c).
 constexpr uint8_t MAW1_MAGIC[4] = { 0x4D, 0x41, 0x57, 0x31 };
 
 enum AwState : uint8_t
@@ -66,8 +77,8 @@ enum class GameVariant : uint8_t
 
 struct AwConfig
 {
-    uint16_t syncWord;    // AW1: 0x5678, AW2: 0x9ABC
-    uint8_t  packTailSz;  // words after the packet payload: AW1: 1, AW2: 2
+    uint16_t syncWord;       // AW1: 0x5678, AW2: 0x9ABC
+    uint8_t  checksumWords;  // between a packet's size and its data: AW1: 1, AW2: 2
 
     static constexpr AwConfig forVariant(GameVariant v)
     {
@@ -76,47 +87,44 @@ struct AwConfig
     }
 };
 
-// PIO master-mode round pacing, in PIO delay-loop iterations (~542.5 ns each,
-// clkdiv 67.816 — see gbaLinkLayer.cpp). Matches gpsp's fake-master rates:
-// SLAVE_IRQ_CYCLES_2P (8.3 ms, 2/frame) and SLAVE_IRQ_CYCLES_H (16.7 ms,
-// 1/frame, used in SYNC/INTERSYNC). In slave mode the value is ignored — the
-// parent GBA paces the bus.
+// Gap before each transfer as the bus master, in PIO delay-loop iterations
+// (~542.5 ns each). A parent GBA transfers twice a frame while packets are
+// exchanged and once a frame from the sync barrier on. The gap comes on top of
+// the transfer itself, so a child GBA is clocked a little slower than once a
+// frame: its game waits for a transfer every frame, while two transfers in one
+// frame leave it without a word for the second, which costs every player a
+// step of that frame's keys. In slave mode the value is ignored: the parent
+// GBA paces the bus.
 constexpr uint32_t timingPacketXg = 15370;
 constexpr uint32_t timingSync     = 30765;
 
-// Frame-level limits. cnt is carried in 8 bits of the MAW1 flags word, so a
-// frame can never describe more than 255 words.
+// A frame's word count travels in 8 bits.
 constexpr uint16_t maxFrameWords = 255;
 constexpr size_t   maxFrameBytes = 8 + 2 * static_cast<size_t>(maxFrameWords);
 
-// Replay queue size in words, same as gpsp's MAX_FPACK.
-constexpr uint16_t replayQueueWords = 512;
+// Words of one player that wait to be replayed, with one header word per
+// packet or press.
+constexpr uint16_t queueWords = 1024;
 
-// Packet accumulator: max packet = size word (1) + payload (255) + tail (2).
-constexpr uint16_t accumWords = 300;
+// A press that lasts is sent in parts of this many transfers (one a frame), so
+// it has no longest length. Every part but the last has keysContinue for its
+// command. The replay of such a press starts a little late, so that its next
+// part is there in time, and its keys stay held if a part is late all the same.
+constexpr uint16_t longPressPart     = 120;
+constexpr uint16_t keysContinue      = 0xFFFE;
+constexpr uint8_t  longPressLead     = 30;
+constexpr uint16_t longPressPatience = 600;
 
-// Suppressed duplicate announcements are re-sent at least this often so the
-// remote's link timeout is fed even when nothing changes.
+// The largest packet (size, checksums, data) and the largest part of a press.
+constexpr uint16_t accumWords = 1 + 2 + 0x80;
+
+// A repeated state announcement is sent again this often, so the others still
+// hear from this adapter.
 constexpr uint32_t keepaliveMs = 250;
 
-// Quiet time after which the link is reported as reconnecting. Matches
-// gpsp's MAX_FRAME_TIMEOUT (240 frames ≈ 4 s) — which gpsp defines but never
-// wired up for AW; here it drives a status report only, never a protocol
-// change (the game's own link-error timeout is the final arbiter).
+// Without a frame from a player for this long the link is reported as
+// reconnecting. A status only: the GBA is answered either way.
 constexpr uint32_t linkTimeoutMs = 4000;
-
-struct AwCounters
-{
-    uint32_t rounds = 0;
-    uint32_t txFrames = 0;
-    uint32_t txSuppressed = 0;     // deduplicated cnt==0 announcements
-    uint32_t txDropOversize = 0;   // frame would exceed maxFrameWords
-    uint32_t txDropRingFull = 0;   // outbound ring had no room for the frame
-    uint32_t rxFrames = 0;
-    uint32_t rxDropQueueFull = 0;
-    uint32_t fallbackEcho = 0;     // INTERSYNC rounds answered with lastcmd & 0xFC00
-    uint16_t rqHighWater = 0;
-};
 
 inline size_t maw1Serialize(uint8_t* out, uint16_t cmd, uint8_t state,
                             const uint16_t* words, uint16_t cnt)
@@ -138,9 +146,9 @@ inline size_t maw1Serialize(uint8_t* out, uint16_t cmd, uint8_t state,
     return 8 + 2 * static_cast<size_t>(cnt);
 }
 
-// Reassembles MAW1 frames from an arbitrary byte stream (the network path
-// chunks frames into 51-byte transport packets and pads the tail of a chunk
-// with zeros; zeros never match the magic, so the parser self-synchronizes).
+// Reassembles MAW1 frames from one player's byte stream. The stream arrives
+// in transport packets whose unused tail is zero; zeros never match the magic,
+// so the parser finds the next frame by itself.
 class Maw1StreamParser
 {
 public:
@@ -209,318 +217,492 @@ struct AwProxy
     using EmitFn = void(*)(void* ctx, uint16_t cmd, uint8_t state,
                            const uint16_t* words, uint16_t cnt);
 
+    // What is known of another player's GBA, and what it sent that waits to
+    // be replayed to the local GBA.
+    struct Peer
+    {
+        volatile uint8_t  state = statePacketXg;
+        volatile uint32_t lastHeardMs = 0;   // 0 = never heard from
+
+        // Entries of a header word (entryKeys, entryContinues, word count)
+        // followed by the words: a packet as the player's GBA sent it, or the
+        // keys of a press.
+        uint16_t queue[queueWords] = {};
+        uint16_t count = 0;      // words in the queue, headers included
+        uint16_t position = 0;   // words of the first entry the GBA has been given
+
+        bool     released = false;   // a press was just replayed to its end
+        uint16_t held = 0;           // key word of a long press whose next part is awaited
+        uint16_t heldFor = 0;
+        uint8_t  lead = 0;           // transfers a long press has waited to start
+    };
+
     AwConfig cfg = AwConfig::forVariant(GameVariant::aw1);
     EmitFn emit = nullptr;
     void* emitCtx = nullptr;
 
-    // Role-faithful porting flag. gpsp runs serialaw_master_send() against
-    // the master GBA and serialaw_update() against slave GBAs, and the two
-    // differ in exactly two ways (both preserved here, selected by role):
-    //   - update() re-processes the word that exits the SYNC barrier through
-    //     the new state's handler in the same round; master_send() does not.
-    //   - master_send() tracks lastcmd on every word; update() only on
-    //     in-range INTERSYNC words.
-    // gbaIsMaster=true  → adapter in SLAVE link mode, GBA is bus master
-    //                     → master_send() semantics.
-    // gbaIsMaster=false → adapter in MASTER link mode, GBA is bus slave
-    //                     → update() semantics.
+    // gbaIsMaster=true:  the adapter is in SLAVE link mode, the GBA is the bus
+    //                    master (player 1).
+    // gbaIsMaster=false: the adapter is the bus master, the GBA a child.
+    // Two details differ: a child's word that leaves the sync barrier for
+    // packets is handled again as one, and only a master GBA has to be between
+    // packets to be shown that another player waits at the sync barrier.
     bool gbaIsMaster = true;
 
-    // Local GBA proxy state (≙ gpsp serstate.aw.peer[self])
-    uint8_t  state = statePacketXg;
-    uint8_t  pstate = pstateCommands;
-    uint16_t accum[accumWords] = {};
-    uint16_t accumCount = 0;
-    uint16_t lastcmd = 0;
+    // The other players, in seat order.
+    uint8_t peerCount = 1;
+    Peer peers[maxPeers];
 
-    // Remote peer (≙ gpsp serstate.aw.peer[remote])
-    volatile uint8_t  remoteState = statePacketXg;
-    volatile uint32_t lastHeardMs = 0;   // 0 = never heard from the remote
-    uint16_t rq[replayQueueWords] = {};
-    uint16_t rqCount = 0;
-    uint16_t rqRecvd = 0;
+    // The local GBA's phase.
+    volatile uint8_t state = statePacketXg;
 
-    // Response staged for the next wire round. The PIO loads the transmit
-    // word at the start of a round — before the current round's incoming
-    // word is visible — so every response is computed one round in advance
-    // (exactly how a real GBA child preloads SIOMLT_SEND).
-    volatile uint16_t stagedTx = CMD_NONE;
+    // The other players' words for the next transfer, in seat order. The PIO
+    // loads them at the start of a transfer, before the GBA's word in it is
+    // known, so every answer is computed one transfer ahead.
+    volatile uint16_t stagedTx[maxPeers] = { CMD_NONE, CMD_NONE, CMD_NONE };
     volatile uint32_t stagedTiming = timingPacketXg;
 
-    AwCounters counters;
+    //-//////////////////////////////////////////////////////////////////////-//
+    // A finished transfer with the local GBA's word: follows the game and
+    // stages the next transfer.
+    //-//////////////////////////////////////////////////////////////////////-//
+
+    void onRound(uint16_t word, uint32_t nowMs)
+    {
+        if (state == stateSync)
+        {
+            if (word == CMD_NONE)
+            {
+                leaveKeys();
+                if (!gbaIsMaster) handlePacketXg(word, nowMs);
+            }
+            else
+            {
+                // Any other word: the game saw everyone at the barrier and
+                // goes on to exchange keys.
+                const bool passed = word != cfg.syncWord && word != CMD_NOP;
+                if (passed) enterIntersync();
+                emitFrame(0, passed ? stateIntersync : stateSync, nullptr, 0, nowMs);
+                if (passed) handleIntersync(word, nowMs);
+            }
+        }
+        else if (state == stateIntersync)
+        {
+            handleIntersync(word, nowMs);
+        }
+        else
+        {
+            handlePacketXg(word, nowMs);
+        }
+
+        stageNextTx();
+    }
+
+    //-//////////////////////////////////////////////////////////////////////-//
+    // A frame from another player. The caller serializes against onRound()
+    // (irq_lock).
+    //-//////////////////////////////////////////////////////////////////////-//
+
+    void applyNetFrame(uint8_t peerIndex, uint16_t cmd, uint8_t ste,
+                       const uint16_t* words, uint16_t cnt, uint32_t nowMs)
+    {
+        if (peerIndex >= peerCount) return;
+        Peer& peer = peers[peerIndex];
+        peer.state = ste;
+        // 0 means "never heard"; avoid storing it for a wrap-around tick.
+        peer.lastHeardMs = nowMs ? nowMs : 1;
+
+        // A frame without words only announces the player's state.
+        if (cnt == 0) return;
+
+        if (ste == stateIntersync)
+        {
+            // Keys are for a game that exchanges keys, or waits at the barrier
+            // for the screens to come.
+            if (state == statePacketXg && !atBarrier) return;
+            pushEntry(peer, entryKeys | (cmd == keysContinue ? entryContinues : 0), nullptr, words, cnt);
+        }
+        else if (ste == statePacketXg && cnt >= 2)
+        {
+            // Replayed as the player's GBA sent it: the start word, then the
+            // size, the checksum and the data.
+            pushEntry(peer, 0, &cmd, words, cnt);
+        }
+    }
+
+private:
+
+    static constexpr uint16_t entryKeys      = 0x8000;
+    static constexpr uint16_t entryContinues = 0x4000;
+    static constexpr uint16_t entryLength    = 0x3FFF;
+
+    uint8_t  pstate = pstateCommands;
+    // The game repeats the sync word while packets of the others still wait
+    // to be replayed to it.
+    bool     atBarrier = false;
+    // The packet or the press the game is sending.
+    uint16_t accum[accumWords] = {};
+    uint16_t accumCount = 0;
+    uint16_t bodyWords = 0;   // words of the packet being sent that follow its size
+    uint8_t  syncRun = 0;     // sync words in a row inside a packet
+    // The game's last key word: its screen number is what the other players
+    // are shown at when they press nothing.
+    uint16_t lastcmd = 0;
+    // The game's keys of the last transfer and of the one before, as it
+    // counts them.
+    uint16_t held = 0;
+    uint16_t heldBefore = 0;
 
     // Announcement dedup (see emitFrame)
     uint8_t  lastSentState = 0xFF;
     uint32_t lastTxMs = 0;
     bool     sentAnything = false;
 
+    static bool isKeyWord(uint16_t word) { return word >= 0x8000 && word <= 0x9F00; }
+
     //-//////////////////////////////////////////////////////////////////////-//
-    // Wire round: FSM step on the word received from the local GBA, then
-    // stage the response for the following round.
-    // Direct port of gpsp serialaw_master_send()/serialaw_update() — the two
-    // are the same FSM, they only differ in who paces the rounds.
+    // The local GBA's words
     //-//////////////////////////////////////////////////////////////////////-//
 
-    void onRound(uint16_t mvalue, uint32_t nowMs)
+    void handleIntersync(uint16_t word, uint32_t nowMs)
     {
-        counters.rounds++;
-
-        if (state == stateSync)
+        if (word == CMD_NOP)
         {
-            if (mvalue == CMD_NONE)
-            {
-                state = statePacketXg;
-                if (!gbaIsMaster) handlePacketXg(mvalue, nowMs);
-            }
-            else
-            {
-                if (mvalue != cfg.syncWord && mvalue != CMD_NOP)
-                {
-                    // First non-sync word: the game has seen our partner's
-                    // sync response and moves to realtime exchange.
-                    state = stateIntersync;
-                    accumCount = 0;
-                }
-                emitFrame(0, state, nullptr, 0, nowMs);
-                if (!gbaIsMaster && state == stateIntersync)
-                    handleIntersync(mvalue, nowMs);
-            }
+            // The game had no word ready: a transfer without it counts for
+            // nobody, and the game goes on with every player's keys of the
+            // transfer before the last. For the others that is so for this
+            // game's keys.
+            if (lastcmd) keyWord((lastcmd & 0xFC00) | (heldBefore & 0x3FF), nowMs);
         }
-        else if (state == stateIntersync)
+        else if (isKeyWord(word) && word != cfg.syncWord)
         {
-            handleIntersync(mvalue, nowMs);
+            keyWord(word, nowMs);
+            lastcmd = word;
         }
         else
         {
-            handlePacketXg(mvalue, nowMs);
-        }
-
-        if (gbaIsMaster) lastcmd = mvalue;
-
-        stageNextTx();
-    }
-
-    //-//////////////////////////////////////////////////////////////////////-//
-    // Network frame from the remote adapter (≙ gpsp serialaw_net_receive).
-    // Caller must serialize against onRound() (irq_lock).
-    //-//////////////////////////////////////////////////////////////////////-//
-
-    void applyNetFrame(uint16_t cmd, uint8_t ste, const uint16_t* words,
-                       uint16_t cnt, uint32_t nowMs)
-    {
-        counters.rxFrames++;
-        remoteState = ste;
-        // 0 means "never heard"; avoid storing it for a wrap-around tick.
-        lastHeardMs = nowMs ? nowMs : 1;
-
-        if (ste == stateIntersync && cnt >= 2)
-        {
-            if (rqCount + cnt + 1 < replayQueueWords)
-            {
-                rq[rqCount++] = cnt;
-                std::memcpy(&rq[rqCount], words, cnt * sizeof(uint16_t));
-                rqCount += cnt;
-            }
-            else counters.rxDropQueueFull++;
-        }
-        else if (ste == statePacketXg && cnt >= 2)
-        {
-            if (rqCount + cnt + 2 < replayQueueWords)
-            {
-                // Replayed as the remote GBA sent it on the wire: the 0x4Fxx
-                // command word first, then size + payload + tail.
-                rq[rqCount++] = cnt + 1;
-                rq[rqCount++] = cmd;
-                std::memcpy(&rq[rqCount], words, cnt * sizeof(uint16_t));
-                rqCount += cnt;
-            }
-            else counters.rxDropQueueFull++;
-        }
-        // cnt < 2 frames are state announcements / keepalives only, same as
-        // gpsp's cnt >= 2 guards.
-
-        if (rqCount > counters.rqHighWater) counters.rqHighWater = rqCount;
-    }
-
-private:
-
-    void handleIntersync(uint16_t mvalue, uint32_t nowMs)
-    {
-        if (mvalue >= 0x8000 && mvalue <= 0x9F00)
-        {
-            if (mvalue & 0x3FF)
-            {
-                if (accumCount < accumWords) accum[accumCount++] = mvalue;
-            }
-            else
-            {
-                // Low 10 bits clear terminates a burst; the cmd field carries
-                // the previous word (receivers ignore it for INTERSYNC).
-                emitFrame(lastcmd, stateIntersync, accum, accumCount, nowMs);
-                accumCount = 0;
-            }
-            lastcmd = mvalue;
-        }
-        else if (mvalue != CMD_NOP)
-        {
-            state = statePacketXg;
+            // The game is back to packets, and this is the first word of
+            // them: a packet's start, or the sync word (Advance Wars 2's looks
+            // like a key word, with keys no GBA can press together).
+            leaveKeys();
+            handlePacketXg(word, nowMs);
         }
     }
 
-    void handlePacketXg(uint16_t mvalue, uint32_t nowMs)
+    // The game's keys of one transfer: a press is collected until the keys
+    // are released.
+    void keyWord(uint16_t word, uint32_t nowMs)
     {
+        heldBefore = held;
+        held = word;
+        if (word & 0x3FF)
+        {
+            accum[accumCount++] = word;
+            // The last part of a press keeps two words.
+            if (accumCount == longPressPart + 2)
+            {
+                emitFrame(keysContinue, stateIntersync, accum, longPressPart, nowMs);
+                accum[0] = accum[longPressPart];
+                accum[1] = accum[longPressPart + 1];
+                accumCount = 2;
+            }
+        }
+        else
+        {
+            // The keys are released: the press goes out.
+            emitFrame(lastcmd, stateIntersync, accum, accumCount, nowMs);
+            accumCount = 0;
+        }
+    }
+
+    // The game is done with the screens its keys were for: what is left of
+    // the others' keys came too late.
+    void leaveKeys()
+    {
+        state = statePacketXg;
+        for (uint8_t i = 0; i < peerCount; i++)
+        {
+            removeEntries(peers[i], true);
+            peers[i].released = false;
+            peers[i].held = 0;
+            peers[i].lead = 0;
+        }
+    }
+
+    void enterIntersync()
+    {
+        state = stateIntersync;
+        atBarrier = false;
+        accumCount = 0;
+        held = heldBefore = 0;
+        // Packets still queued were sent before their player reached the
+        // barrier: repeats the game no longer reads.
+        for (uint8_t i = 0; i < peerCount; i++) removeEntries(peers[i], false);
+    }
+
+    // True when the game left a packet unfinished to wait at the sync barrier:
+    // it repeats the sync word (a child with CMD_NOP in between).
+    bool packetGivenUp(uint16_t word)
+    {
+        if (word == cfg.syncWord) syncRun++;
+        else if (word != CMD_NOP || syncRun == 0) syncRun = 0;
+        if (syncRun < 2) return false;
+        syncRun = 0;
+        return true;
+    }
+
+    bool packetsQueued() const
+    {
+        for (uint8_t i = 0; i < peerCount; i++)
+        {
+            const Peer& peer = peers[i];
+            for (uint16_t at = 0; at < peer.count; at += (peer.queue[at] & entryLength) + 1)
+            {
+                if (!(peer.queue[at] & entryKeys)) return true;
+            }
+        }
+        return false;
+    }
+
+    void handlePacketXg(uint16_t word, uint32_t nowMs)
+    {
+        if (pstate != pstateCommands && packetGivenUp(word))
+        {
+            accumCount = 0;
+            pstate = pstateCommands;
+        }
+
         switch (pstate)
         {
             case pstateCommands:
-                if ((mvalue >> 8) == 0x4F)
+                if (word == packetStart)
                 {
+                    atBarrier = false;
+                    syncRun = 0;
                     pstate = pstatePacketHdr;
                 }
-                else if (mvalue == cfg.syncWord && rqCount == 0)
+                else if (word == cfg.syncWord)
                 {
-                    // Only enter the sync barrier once the remote's queued
-                    // packets have been fully replayed.
-                    state = stateSync;
+                    if (!packetsQueued())
+                    {
+                        // The barrier is only entered once the game has been
+                        // given everyone's packets.
+                        atBarrier = false;
+                        state = stateSync;
+                    }
+                    else
+                    {
+                        // The others are told at once, as on a cable: a leader
+                        // repeats its last packets until it sees everyone at
+                        // the barrier, so waiting for its packets to run out
+                        // could wait forever.
+                        atBarrier = true;
+                        emitFrame(0, stateSync, nullptr, 0, nowMs);
+                    }
+                }
+                else if (word == CMD_NOP && atBarrier)
+                {
+                    // A child's game sends this between two sync words.
+                }
+                else if (atBarrier && isKeyWord(word))
+                {
+                    // The game saw everyone at the barrier in the words it was
+                    // still being given, and exchanges keys already.
+                    enterIntersync();
+                    emitFrame(0, stateIntersync, nullptr, 0, nowMs);
+                    handleIntersync(word, nowMs);
                 }
                 else
                 {
-                    emitFrame(mvalue, statePacketXg, nullptr, 0, nowMs);
+                    atBarrier = false;
+                    emitFrame(word, statePacketXg, nullptr, 0, nowMs);
                 }
                 break;
 
             case pstatePacketHdr:
-                accum[0] = mvalue & 0xFF;
-                accumCount = 1;
-                pstate = pstatePacketBody;
-                break;
-
-            default:  // pstatePacketBody
             {
-                const uint16_t pktlen = accum[0] + cfg.packTailSz;
-                if (accumCount < accumWords) accum[accumCount++] = mvalue;
-                if (accumCount == pktlen + 1)
+                // The size, signed. With a larger one this is no packet, and
+                // the word is looked at again for what else it is.
+                const int16_t size = static_cast<int16_t>(word);
+                if (size > maxPacketSize)
                 {
                     pstate = pstateCommands;
-                    emitFrame(0x4FFF, statePacketXg, accum, accumCount, nowMs);
+                    handlePacketXg(word, nowMs);
+                    break;
                 }
+                accum[0] = word;
+                accumCount = 1;
+                bodyWords = static_cast<uint16_t>(size > 0 ? size : 0) + cfg.checksumWords;
+                pstate = pstatePacketBody;
                 break;
             }
+
+            default:  // pstatePacketBody
+                // By count, as the games take it: nothing inside a packet ends
+                // it early.
+                accum[accumCount++] = word;
+                if (accumCount == bodyWords + 1)
+                {
+                    pstate = pstateCommands;
+                    emitFrame(packetStart, statePacketXg, accum, accumCount, nowMs);
+                }
+                break;
         }
     }
+
+    //-//////////////////////////////////////////////////////////////////////-//
+    // The other players' words
+    //-//////////////////////////////////////////////////////////////////////-//
 
     void stageNextTx()
     {
-        uint16_t tx;
-        switch (state)
+        for (uint8_t i = 0; i < peerCount; i++)
         {
-            case stateSync:
-                tx = (remoteState >= stateSync) ? cfg.syncWord : CMD_NONE;
-                break;
-
-            case stateIntersync:
+            Peer& peer = peers[i];
+            uint16_t tx;
+            switch (state)
             {
-                const uint16_t v = popReplayVal();
-                if (v) tx = v;
-                else
-                {
-                    // gpsp answers idle INTERSYNC rounds with the command
-                    // class of the current word (mvalue & 0xFC00). One round
-                    // behind, lastcmd is that word, so this echoes the same
-                    // class except on the round right after a class change —
-                    // gpsp's own CMD_NOP path uses lastcmd & 0xFC00 too, so
-                    // the game accepts class-stale echoes.
-                    tx = lastcmd & 0xFC00;
-                    counters.fallbackEcho++;
-                }
-                break;
+                case stateSync:
+                    tx = (peer.state >= stateSync) ? cfg.syncWord : CMD_NONE;
+                    break;
+
+                case stateIntersync:
+                    // Without keys of the player, a key word of the game's own
+                    // screen number.
+                    tx = replayKeys(peer);
+                    if (!tx) tx = lastcmd & 0xFC00;
+                    break;
+
+                default:  // statePacketXg
+                    tx = replayPacket(peer);
+                    break;
             }
-
-            default:  // statePacketXg
-                tx = popReplay();
-                break;
+            stagedTx[i] = tx;
         }
-
-        stagedTx = tx;
         stagedTiming = (state >= stateSync) ? timingSync : timingPacketXg;
     }
 
-    // ≙ gpsp process_awpeer_val (serial_proto.c:438): replay queued INTERSYNC
-    // words; idle → 0 (never a valid INTERSYNC word, callers use it as "no
-    // data").
-    uint16_t popReplayVal()
+    // The next word of the player's queued keys, 0 without any.
+    uint16_t replayKeys(Peer& peer)
     {
-        if (rqRecvd == 0 && rqCount > 0) rqRecvd = 1;
-        if (rqRecvd == 0) return 0;
-
-        const uint16_t numw = rq[0];
-        if (rqRecvd >= numw)
+        // Two presses that arrive together must not run into one long press.
+        if (peer.released)
         {
-            const uint16_t ret = rq[rqRecvd];
-            popEntry(numw);
-            return ret;
-        }
-        return rq[rqRecvd++];
-    }
-
-    // ≙ gpsp process_awpeer (serial_proto.c:462): replay queued packets with
-    // a trailing CMD_NONE per packet; idle → CMD_SYNC while the remote sits
-    // at the sync barrier, CMD_NONE otherwise.
-    uint16_t popReplay()
-    {
-        if (rqRecvd == 0 && rqCount > 0) rqRecvd = 1;
-        if (rqRecvd == 0)
-        {
-            // gpsp gates the sync answer on peer[0].pstate == COMMANDS. On
-            // its master instance peer[0] is the local parse state; on slave
-            // instances peer[0].pstate is never written and the gate is
-            // always true. Mirror that per role.
-            const bool betweenPackets = !gbaIsMaster || (pstate == pstateCommands);
-            return (betweenPackets && remoteState == stateSync)
-                       ? cfg.syncWord : CMD_NONE;
+            peer.released = false;
+            return 0;
         }
 
-        const uint16_t numw = rq[0];
-        if (rqRecvd > numw)
+        // A packet is for after the keys: its player has gone on already.
+        if (peer.count == 0 || !(peer.queue[0] & entryKeys))
         {
-            popEntry(numw);
-            return CMD_NONE;
+            if (!peer.held) return 0;
+            if (++peer.heldFor > longPressPatience) peer.held = 0;
+            return peer.held;
         }
-        return rq[rqRecvd++];
+
+        const bool continues = peer.queue[0] & entryContinues;
+        const uint16_t length = peer.queue[0] & entryLength;
+        if (peer.position == 0 && continues && !peer.held && peer.lead < longPressLead)
+        {
+            peer.lead++;
+            return 0;
+        }
+
+        const uint16_t word = peer.queue[1 + peer.position++];
+        if (peer.position == length)
+        {
+            dropEntry(peer);
+            peer.lead = 0;
+            peer.heldFor = 0;
+            peer.held = continues ? word : 0;
+            peer.released = !continues;
+        }
+        return word;
     }
 
-    void popEntry(uint16_t numw)
+    // The next word of the player's queued packets, each followed by one
+    // CMD_NONE. Without any: the sync word while the player waits at the
+    // barrier, else CMD_NONE.
+    uint16_t replayPacket(Peer& peer)
     {
-        rqRecvd = 0;
-        rqCount -= numw + 1;
-        std::memmove(&rq[0], &rq[numw + 1], rqCount * sizeof(uint16_t));
+        // Keys in the queue are for the screens after the barrier, from a
+        // player who is through it already; a game that left the barrier
+        // again won't get there.
+        if (!atBarrier && peer.count && (peer.queue[0] & entryKeys)) removeEntries(peer, true);
+
+        if (peer.count == 0 || (peer.queue[0] & entryKeys))
+        {
+            const bool betweenPackets = !gbaIsMaster || pstate == pstateCommands;
+            // A player who is through the barrier already was at it: a game
+            // still waiting there sees it so.
+            const bool waits = peer.state == stateSync || (atBarrier && peer.state == stateIntersync);
+            return (betweenPackets && waits) ? cfg.syncWord : CMD_NONE;
+        }
+
+        const uint16_t length = peer.queue[0] & entryLength;
+        if (peer.position < length) return peer.queue[1 + peer.position++];
+        dropEntry(peer);
+        return CMD_NONE;
     }
+
+    //-//////////////////////////////////////////////////////////////////////-//
+    // Queue
+    //-//////////////////////////////////////////////////////////////////////-//
+
+    static void pushEntry(Peer& peer, uint16_t flags, const uint16_t* first,
+                          const uint16_t* words, uint16_t cnt)
+    {
+        const uint16_t length = cnt + (first ? 1 : 0);
+        if (peer.count + length + 1 > queueWords) return;
+        uint16_t* entry = &peer.queue[peer.count];
+        *entry++ = flags | length;
+        if (first) *entry++ = *first;
+        std::memcpy(entry, words, cnt * sizeof(uint16_t));
+        peer.count += length + 1;
+    }
+
+    static void dropEntry(Peer& peer)
+    {
+        const uint16_t size = (peer.queue[0] & entryLength) + 1;
+        peer.count -= size;
+        std::memmove(&peer.queue[0], &peer.queue[size], peer.count * sizeof(uint16_t));
+        peer.position = 0;
+    }
+
+    // Takes the presses (keys) or the packets out of a player's queue.
+    static void removeEntries(Peer& peer, bool keys)
+    {
+        uint16_t kept = 0;
+        for (uint16_t at = 0; at < peer.count;)
+        {
+            const uint16_t size = (peer.queue[at] & entryLength) + 1;
+            if (static_cast<bool>(peer.queue[at] & entryKeys) != keys)
+            {
+                std::memmove(&peer.queue[kept], &peer.queue[at], size * sizeof(uint16_t));
+                kept += size;
+            }
+            at += size;
+        }
+        peer.count = kept;
+        peer.position = 0;
+    }
+
+    //-//////////////////////////////////////////////////////////////////////-//
+    // Frames to the other players
+    //-//////////////////////////////////////////////////////////////////////-//
 
     void emitFrame(uint16_t cmd, uint8_t ste, const uint16_t* words,
                    uint16_t cnt, uint32_t nowMs)
     {
-        if (cnt > maxFrameWords)
-        {
-            // cnt is 8 bits on the wire; a wrapped count would desync the
-            // remote parser. Real AW packets stay far below this.
-            counters.txDropOversize++;
-            return;
-        }
-
-#ifndef AWPROTO_NO_DEDUP
-        // gpsp emits an announcement for every idle round (~120/s); each of
-        // ours becomes a Socket.IO message. Receivers ignore the payload of
-        // cnt==0 frames (only the state field matters), so suppress repeats
-        // and re-send as a keepalive instead.
+        // The game announces its state in every idle transfer; the others only
+        // need to hear a change, and that this adapter is still there.
         if (cnt == 0 && sentAnything && ste == lastSentState &&
             (nowMs - lastTxMs) < keepaliveMs)
         {
-            counters.txSuppressed++;
             return;
         }
-#endif
 
         if (emit) emit(emitCtx, cmd, ste, words, cnt);
-        counters.txFrames++;
         lastSentState = ste;
         lastTxMs = nowMs;
         sentAnything = true;

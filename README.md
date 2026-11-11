@@ -31,7 +31,7 @@ Manual update
 | **GBA Link** | `0x01` | Link 2 to 4 GBA systems over the internet |
 | **GB Link** | `0x02` | Game Boy link: the adapter clocks the Game Boy (active), the Game Boy clocks the adapter (passive), or they take turns (hybrid); see [GB Link Mode](#gb-link-mode) |
 | **GB Printer** | `0x03` | Game Boy Printer emulation |
-| **GBA Advance Wars** | `0x04` | Advance Wars 1 + 2 |
+| **GBA Advance Wars** | `0x04` | Advance Wars 1 + 2, two to four players. SetMode third byte: `1` Advance Wars, `2` Advance Wars 2. |
 | **GBA e-Reader** | `0x05` | Nintendo e-Reader emulation. SetMode third byte: `1` SMA4 US, `2` Pokémon RS US, `3` SMA4 JPN, `4` Pokémon RS JPN, `5`–`9` SMA4 EUR En/Fr/De/Es/It, `10` Pokémon Emerald US, `11` Pokémon Emerald JPN, `12` (Émeraude) / Emerald, `13` (Smaragd) / Emerald. |
 | **GBA Battle Chip Gate** | `0x06` | Mega Man Battle Network Battle Chip Gate / Progress / Beast Link |
 | **GBA Wireless Adapter** | `0x07` | Wireless Adapter emulation: trade and battle with FireRed/LeafGreen on Nintendo Switch through a companion ESP32 running [GB-Link Switch LDN](https://github.com/GB-Link/GB-Link-Switch-LDN) |

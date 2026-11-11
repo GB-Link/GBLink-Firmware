@@ -9,7 +9,8 @@
 #pragma once
 
 // Zephyr glue around awproto::AwProxy: PIO link callbacks on the GBA side,
-// MAW1 frame stream over the 51-byte data transport on the network side.
+// the players' MAW1 frame streams over the 51-byte data transport on the
+// network side. Every transport packet starts with the seat it comes from.
 //
 // The proxy, stream parser, and outbound ring live in file-scope statics
 // (like the section message queues elsewhere in this codebase) so the ISR
@@ -26,7 +27,8 @@
 class AwProtocolSection
 {
 public:
-    AwProtocolSection(awproto::GameVariant variant, enum MultiMode mode);
+    // seat: the GBA's, 0 for the bus master (player 1). playerCount: 2 to 4.
+    AwProtocolSection(awproto::GameVariant variant, uint8_t seat, uint8_t playerCount);
     ~AwProtocolSection();
 
     void process();
@@ -39,12 +41,14 @@ private:
     bool m_cancel = false;
     bool m_reportedReconnecting = false;
 
-    // Transport chunk being filled from the outbound ring. Frames may span
-    // chunks; a chunk's unused tail is zero-padded (the remote stream parser
-    // skips padding while seeking the frame magic). 51 bytes: the Celio client
-    // and server carry data in packets of that size.
+    // Transport chunk being filled from the outbound ring: the seat, then the
+    // frame stream. Frames may span chunks; a chunk's unused tail is
+    // zero-padded (the remote stream parser skips padding while seeking the
+    // frame magic). 51 bytes: the Celio client and server carry data in
+    // packets of that size.
+    static constexpr size_t chunkHeader = 1;
     uint8_t m_chunk[51];
-    size_t m_chunkLen = 0;
+    size_t m_chunkLen = chunkHeader;
 };
 
 void awProto_receiveHandler(std::span<const uint8_t> data, void*);

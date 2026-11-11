@@ -9,8 +9,7 @@ class AdvanceWarsModule : public IModule
 private:
     enum class LinkModeCommand : uint8_t
     {
-        SetModeMaster = 0x10,
-        SetModeSlave = 0x11,
+        SetPlayerSettings = 0x10,
         StartHandshake = 0x12,
         ConnectLink = 0x13
     };
@@ -44,6 +43,7 @@ private:
     struct k_sem m_waitForStart;
 
     AwProtocolSection* m_currentSection = nullptr;
-    enum MultiMode m_multiMode = SLAVE;
+    uint8_t m_seat = 0;
+    uint8_t m_playerCount = 2;
     awproto::GameVariant m_variant;
 };

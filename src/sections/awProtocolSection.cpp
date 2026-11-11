@@ -18,7 +18,10 @@
 RING_BUF_DECLARE(g_awOutRing, 2048);
 
 static awproto::AwProxy g_proxy;
-static awproto::Maw1StreamParser g_parser;
+// One per other player, in seat order: their frames arrive mixed, packet by packet.
+static awproto::Maw1StreamParser g_parsers[awproto::maxPeers];
+static uint8_t g_seat = 0;
+static uint8_t g_playerCount = 2;
 
 // Gates the transport data handler, which is registered before the link
 // handshake completes and may also run a little past section teardown. With
@@ -28,9 +31,9 @@ static volatile bool g_sessionActive = false;
 
 static struct NextTransmit transmitCallback(void*)
 {
-    // The GBA is player 1 (seat 0) as bus master, else player 2 (seat 1). The slave program ignores the seat.
-    const uint8_t gbaSeat = g_proxy.gbaIsMaster ? 0 : 1;
-    return { gbaSeat, TxValues(g_proxy.stagedTx), g_proxy.stagedTiming };
+    TxValues txValues;
+    for (uint8_t i = 0; i < g_proxy.peerCount; i++) txValues.push(g_proxy.stagedTx[i]);
+    return { g_seat, txValues, g_proxy.stagedTiming };
 }
 
 static void receiveCallback(uint16_t rx, void*)
@@ -52,42 +55,49 @@ static void emitTrampoline(void*, uint16_t cmd, uint8_t state,
     {
         ring_buf_put(&g_awOutRing, frame, len);
     }
-    else
-    {
-        g_proxy.counters.txDropRingFull++;
-    }
 }
 
-static void frameTrampoline(void*, uint16_t cmd, uint8_t state,
+static void frameTrampoline(void* peer, uint16_t cmd, uint8_t state,
                             const uint16_t* words, uint16_t cnt)
 {
-    // The replay queue is popped from the PIO done-ISR; lock out interrupts
+    // The replay queues are popped from the PIO done-ISR; lock out interrupts
     // for the push so the two never interleave (pushes are small memcpys,
     // worst case ~0.5 KB, a few µs — well inside the ≥8 ms round period).
     const unsigned int key = irq_lock();
-    g_proxy.applyNetFrame(cmd, state, words, cnt, k_uptime_get_32());
+    g_proxy.applyNetFrame(static_cast<uint8_t>(reinterpret_cast<uintptr_t>(peer)), cmd, state, words, cnt, k_uptime_get_32());
     irq_unlock(key);
 }
 
 void awProto_receiveHandler(std::span<const uint8_t> data, void*)
 {
-    if (g_sessionActive)
-    {
-        g_parser.push(data.data(), data.size());
-    }
+    if (!g_sessionActive || data.empty()) return;
+
+    // A packet starts with the seat it comes from; the peers are the other seats in order.
+    const uint8_t seat = data[0];
+    if (seat == g_seat || seat >= g_playerCount) return;
+    const uint8_t peer = seat < g_seat ? seat : seat - 1;
+    g_parsers[peer].push(data.data() + 1, data.size() - 1);
 }
 
-AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, enum MultiMode multiMode)
+AwProtocolSection::AwProtocolSection(awproto::GameVariant variant, uint8_t seat, uint8_t playerCount)
 {
     new (&g_proxy) awproto::AwProxy();
-    new (&g_parser) awproto::Maw1StreamParser();
+
+    g_seat = seat;
+    g_playerCount = playerCount;
+    m_chunk[0] = seat;
 
     g_proxy.cfg = awproto::AwConfig::forVariant(variant);
-    // SLAVE link mode means the attached GBA is the bus master (player 1).
-    g_proxy.gbaIsMaster = (multiMode == SLAVE);
+    // Seat 0's GBA is the bus master (player 1): the adapter is in SLAVE link mode.
+    g_proxy.gbaIsMaster = (seat == 0);
+    g_proxy.peerCount = playerCount - 1;
     g_proxy.emit = &emitTrampoline;
 
-    g_parser.setCallback(&frameTrampoline, nullptr);
+    for (uint8_t peer = 0; peer < awproto::maxPeers; peer++)
+    {
+        new (&g_parsers[peer]) awproto::Maw1StreamParser();
+        g_parsers[peer].setCallback(&frameTrampoline, reinterpret_cast<void*>(static_cast<uintptr_t>(peer)));
+    }
 
     ring_buf_reset(&g_awOutRing);
 
@@ -114,13 +124,19 @@ void AwProtocolSection::process()
         pumpOutbound();
 
         // Link supervision: status reporting only, the proxy keeps answering
-        // the GBA regardless. Skipped until the remote has spoken once, so a
-        // partner who hasn't started their game yet doesn't read as a drop.
-        const uint32_t lastHeard = g_proxy.lastHeardMs;
-        if (lastHeard != 0)
+        // the GBA regardless. A player counts once it has spoken, so one who
+        // hasn't started their game yet doesn't read as a drop.
+        bool heard = false;
+        bool quiet = false;
+        for (uint8_t peer = 0; peer < g_proxy.peerCount; peer++)
         {
-            const bool quiet =
-                (k_uptime_get_32() - lastHeard) > awproto::linkTimeoutMs;
+            const uint32_t lastHeard = g_proxy.peers[peer].lastHeardMs;
+            if (lastHeard == 0) continue;
+            heard = true;
+            if ((k_uptime_get_32() - lastHeard) > awproto::linkTimeoutMs) quiet = true;
+        }
+        if (heard)
+        {
             if (quiet && !m_reportedReconnecting)
             {
                 sendLinkStatus(LinkStatus::LinkReconnecting);
@@ -151,18 +167,18 @@ void AwProtocolSection::pumpOutbound()
         {
             if (!Transport::sendData(std::span(m_chunk, sizeof(m_chunk))))
                 return;  // transport busy/down — keep the chunk, retry next pass
-            m_chunkLen = 0;
+            m_chunkLen = chunkHeader;
             continue;
         }
 
-        if (m_chunkLen > 0)
+        if (m_chunkLen > chunkHeader)
         {
             // Ring drained mid-chunk. The ring only ever holds whole frames,
             // so this boundary is a frame boundary: pad and flush now rather
             // than waiting for more data (INTERSYNC latency matters).
             std::memset(&m_chunk[m_chunkLen], 0, sizeof(m_chunk) - m_chunkLen);
             if (Transport::sendData(std::span(m_chunk, sizeof(m_chunk))))
-                m_chunkLen = 0;
+                m_chunkLen = chunkHeader;
         }
         return;
     }

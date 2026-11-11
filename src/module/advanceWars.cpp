@@ -6,21 +6,22 @@ void AdvanceWarsModule::execute()
 {
     m_cancel = false;
 
-    // Step 1: Emit AwaitMode — server will assign master/slave
+    // Step 1: Ask for the player settings — the server assigns the seat
     sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     if (m_cancel) return;
 
-    // Step 2: Mode stored in receiveCommand(), emit HandshakeReceived
-    // Server waits for both clients to report HandshakeReceived, then sends StartHandshake
+    // Step 2: Seat stored in receiveCommand(), emit HandshakeReceived
+    // Server waits for every client to report HandshakeReceived, then sends StartHandshake
     sendLinkStatus(LinkStatus::HandshakeReceived);
     k_sem_take(&m_waitForStart, K_FOREVER);
     if (m_cancel) return;
 
-    // Step 3: Run the protocol proxy in the assigned role.
-    // SLAVE = attached GBA is bus master (P1), MASTER = GBA is bus slave (P2).
+    // Step 3: Run the protocol proxy in the assigned seat.
+    // Seat 0's GBA is the bus master (P1): the adapter is in SLAVE link mode. The other seats' GBAs are children.
     {
-        AwProtocolSection section(m_variant, m_multiMode);
+        const enum MultiMode multiMode = (m_seat == 0) ? SLAVE : MASTER;
+        AwProtocolSection section(m_variant, m_seat, m_playerCount);
         m_currentSection = &section;
         // A cancel between the check above and this assignment would miss the
         // section; re-check now that cancel() can reach it.
@@ -29,7 +30,7 @@ void AdvanceWarsModule::execute()
             m_currentSection = nullptr;
             return;
         }
-        multiMode_selectMode(m_multiMode);
+        multiMode_selectMode(multiMode);
         sendLinkStatus(LinkStatus::LinkConnected);
         section.process();
         // Stop the PIO before the section destructor deregisters the link
@@ -45,14 +46,11 @@ void AdvanceWarsModule::receiveCommand(std::span<const uint8_t> command)
 {
     switch (static_cast<LinkModeCommand>(command[0]))
     {
-        case LinkModeCommand::SetModeMaster:
-            // The 4-player server sends [0x10, player count, seat]: seat 0's GBA is player 1, the bus master.
-            m_multiMode = (command.size() >= 3 && command[2] == 0) ? SLAVE : MASTER;
-            k_sem_give(&m_waitForLinkModeCommand);
-            break;
-
-        case LinkModeCommand::SetModeSlave:
-            m_multiMode = SLAVE;
+        case LinkModeCommand::SetPlayerSettings:
+            // [0x10, player count 2-4, seat]
+            if (command.size() < 3 || command[1] < 2 || command[1] > 4 || command[2] >= command[1]) return;
+            m_playerCount = command[1];
+            m_seat = command[2];
             k_sem_give(&m_waitForLinkModeCommand);
             break;
 
