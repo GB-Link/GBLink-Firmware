@@ -123,7 +123,21 @@ public:
 
     void enableHandshake() { m_handshakeState = HandShakeState::enabled; }
 
-    void connectHandshake() { m_handshakeState = HandShakeState::connect; }
+    // A child GBA needs some 0xB9A0 rounds (~16 ms each) before it takes the
+    // connect word; the netplay bridge waits 150 ms (CONNECT_GRACE_MS) before
+    // sending ConnectLink for that reason. Hold a ConnectLink that arrives
+    // sooner until the adapter has sent minSlaveHandshakes of them.
+    static constexpr uint16_t minSlaveHandshakes = 8;
+
+    void connectHandshake()
+    {
+        const unsigned int key = irq_lock();
+        if (m_handshakeState == HandShakeState::enabled && m_slaveHandshakesSent >= minSlaveHandshakes)
+            m_handshakeState = HandShakeState::connect;
+        else
+            m_connectPending = true;
+        irq_unlock(key);
+    }
 
     bool isHandshakeEnabled() { return m_transmitedHandShake[0] == LINK_SLAVE_HANDSHAKE; }
 
@@ -297,6 +311,8 @@ private:
     TransmitBehaviour m_handler = emptyCommand();
     TransiveState m_state = TransiveState::handshake;
     HandShakeState m_handshakeState = HandShakeState::disabled;
+    uint16_t m_slaveHandshakesSent = 0;
+    bool m_connectPending = false;
 
     struct k_timer m_timeoutTimer;
 

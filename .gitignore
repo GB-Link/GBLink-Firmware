@@ -7,3 +7,6 @@ bootloader/
 tools/
 .cache/
 .clangd
+# The host tests' stand-ins for Zephyr headers, not the west workspace
+!/tests/host/stubs/zephyr/
+/tests/host/handshakeTest
