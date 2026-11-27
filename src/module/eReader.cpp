@@ -1,11 +1,8 @@
 #include "eReader.hpp"
 #include "../linkStatus.hpp"
 #include "../sections/eReaderProtocolSection.hpp"
+#include "../layers/link/ereader/ereader.hpp"
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
 
 EReaderModule::EReaderModule(erproto::Profile profile)
     : m_profile(profile)
@@ -31,7 +28,7 @@ void EReaderModule::execute()
 {
     m_cancel = false;
 
-    sendLinkStatus(LinkStatus::AwaitMode);
+    sendLinkStatus(LinkStatus::AwaitPlayerSettings);
     k_sem_take(&m_waitForLinkModeCommand, K_FOREVER);
     if (m_cancel) return;
 
@@ -52,8 +49,8 @@ void EReaderModule::execute()
         section.armLink();
         sendLinkStatus(LinkStatus::LinkConnected);
         section.process();
-        link_changeMode(DISABLED);
-        link_releasePartnerPins();
+        link_disable();
+        ereader_releasePartnerPins();
     }
     m_currentSection = nullptr;
 }

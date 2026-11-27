@@ -1,5 +1,6 @@
 zephyr_library_sources(link.cpp)
-zephyr_library_sources(emu.cpp)
 zephyr_library_sources(gb.cpp)
 zephyr_library_sources(advanceWars.cpp)
 zephyr_library_sources(eReader.cpp)
+zephyr_library_sources(battleChipGate.cpp)
+zephyr_library_sources(rfuWireless.cpp)

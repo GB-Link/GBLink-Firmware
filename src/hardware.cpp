@@ -17,7 +17,6 @@ extern "C" {
 #define VSWITCH_5V_PIN  12
 
 // --- WS2812 PIO Program (4 instructions) ---
-// Ported from gb-link-firmware-reconfigurable/main.c
 static const uint16_t ws2812_program_instructions[] = {
     0x6221, //  0: out    x, 1       side 0 [2]
     0x1123, //  1: jmp    !x, 3      side 1 [1]

@@ -71,18 +71,17 @@ public:
         // m_sendData while the previous async transfer is still reading it.
         k_sem_take(&m_dataTransferDone, K_MSEC(100));
 
-        std::ranges::copy(data, m_sendData.begin());
-        // usb_transfer is async (queues a k_work item), but with bInterval=1 on
-        // the data endpoint the host polls every 1 ms, so the work-queue delay
-        // is absorbed within the next poll cycle and has no meaningful impact.
-        int ret = usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(),
-            USB_TRANS_WRITE, m_usbWriteDataCallback, this);
+        return startDataTransfer(data);
+    }
 
-        if (ret != 0) {
-            k_sem_give(&m_dataTransferDone);
-            return false;
-        }
-        return true;
+    // Like sendData, but fails at once while the host has not taken the previous
+    // transfer yet, instead of waiting. For senders that keep their own queue.
+    bool trySendData(std::span<const uint8_t> data)
+    {
+        if (!m_endpointsEnabled) return false;
+        if (k_sem_take(&m_dataTransferDone, K_NO_WAIT) != 0) return false;
+
+        return startDataTransfer(data);
     }
 
     void setReceiveCommandHandler(const UsbReceiveHandler& handler, void* userData)
@@ -168,6 +167,22 @@ private:
         }
         perpareNextReceive(*delegate);
     };
+
+    bool startDataTransfer(std::span<const uint8_t> data)
+    {
+        std::ranges::copy(data, m_sendData.begin());
+        // usb_transfer is async (queues a k_work item), but with bInterval=1 on
+        // the data endpoint the host polls every 1 ms, so the work-queue delay
+        // is absorbed within the next poll cycle and has no meaningful impact.
+        int ret = usb_transfer(dataInEndpoint, m_sendData.data(), data.size_bytes(),
+            USB_TRANS_WRITE, m_usbWriteDataCallback, this);
+
+        if (ret != 0) {
+            k_sem_give(&m_dataTransferDone);
+            return false;
+        }
+        return true;
+    }
 
     ReceiveDelegate m_receiveCommandHandler = {
         .userData = nullptr,

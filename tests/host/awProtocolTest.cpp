@@ -1,10 +1,8 @@
 // Host-side tests for the Advance Wars protocol proxy (src/sections/awProtocol.hpp).
 // Build & run:  make -C tests/host
 //
-// The FSM semantics under test are a port of gpsp/serial_proto.c
-// (serialaw_master_send / serialaw_update / process_awpeer{,_val} /
-// serialaw_net_receive); expected sequences below are derived from that
-// reference implementation.
+// The frames are gpsp's netpackets (gpsp/serial_proto.c, serialaw_senddata);
+// the proxy's rules are the games' own, see the header.
 
 #include <cstdio>
 #include <cstdlib>
@@ -116,368 +114,382 @@ static void testFraming()
 }
 
 //-//////////////////////////////////////////////////////////////////////////-//
-// PACKETXG: packet capture from local GBA words (gpsp 527-557)
+// A player's proxy with the frames it sent, and one transfer at a time
 //-//////////////////////////////////////////////////////////////////////////-//
 
-static void testPacketCapture(GameVariant variant)
+constexpr uint16_t START = packetStart;
+
+struct Link
 {
-    std::vector<CapturedFrame> frames;
     AwProxy proxy;
-    proxy.cfg = AwConfig::forVariant(variant);
-    proxy.gbaIsMaster = true;
-    proxy.emit = &captureEmit;
-    proxy.emitCtx = &frames;
+    std::vector<CapturedFrame> sent;
+    uint32_t ms = 1000;
 
-    const uint16_t tail = proxy.cfg.packTailSz;
-
-    proxy.onRound(0x4F12, 0);             // packet start marker
-    CHECK_EQ(frames.size(), 0u);
-    proxy.onRound(0x0003, 1);             // payload size = 3
-    CHECK_EQ(frames.size(), 0u);
-
-    // Body: size + tail words, frame emitted on the last one
-    const uint16_t bodyLen = 3 + tail;
-    for (uint16_t i = 0; i < bodyLen; i++)
+    Link(GameVariant variant, uint8_t seat, uint8_t players)
     {
-        CHECK_EQ(frames.size(), 0u);
-        proxy.onRound(0x1100 + i, 2 + i);
-    }
-
-    CHECK_EQ(frames.size(), 1u);
-    CHECK_EQ(frames[0].cmd, 0x4FFF);
-    CHECK_EQ(frames[0].state, statePacketXg);
-    CHECK_EQ(frames[0].words.size(), static_cast<size_t>(bodyLen + 1));
-    CHECK_EQ(frames[0].words[0], 3);      // size word included
-    for (uint16_t i = 0; i < bodyLen; i++)
-        CHECK_EQ(frames[0].words[1 + i], 0x1100 + i);
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// PACKETXG: single-word updates with dedup + keepalive
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testWordUpdateDedup()
-{
-    std::vector<CapturedFrame> frames;
-    AwProxy proxy;
-    proxy.gbaIsMaster = true;
-    proxy.emit = &captureEmit;
-    proxy.emitCtx = &frames;
-
-    proxy.onRound(CMD_NONE, 1000);
-    CHECK_EQ(frames.size(), 1u);          // first announcement always sent
-    CHECK_EQ(frames[0].cmd, CMD_NONE);
-    CHECK_EQ(frames[0].state, statePacketXg);
-
-    proxy.onRound(CMD_NONE, 1010);        // duplicate within keepalive window
-    proxy.onRound(0x1234, 1020);          // value change alone doesn't matter
-    CHECK_EQ(frames.size(), 1u);
-    CHECK_EQ(proxy.counters.txSuppressed, 2u);
-
-    proxy.onRound(CMD_NONE, 1000 + keepaliveMs);
-    CHECK_EQ(frames.size(), 2u);          // keepalive re-send
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// SYNC barrier: entry, announcements, staged responses (gpsp 492-507, 530-532)
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testSyncBarrier()
-{
-    std::vector<CapturedFrame> frames;
-    AwProxy proxy;
-    proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-    proxy.gbaIsMaster = true;
-    proxy.emit = &captureEmit;
-    proxy.emitCtx = &frames;
-
-    // CMD_SYNC with an empty replay queue enters the barrier silently
-    proxy.onRound(0x5678, 0);
-    CHECK_EQ(proxy.state, stateSync);
-    CHECK_EQ(frames.size(), 0u);
-    CHECK_EQ(proxy.stagedTx, CMD_NONE);   // remote not in SYNC yet
-
-    // While in SYNC the proxy announces its state
-    proxy.onRound(0x5678, 10);
-    CHECK_EQ(frames.size(), 1u);
-    CHECK_EQ(frames[0].state, stateSync);
-    CHECK_EQ(frames[0].words.size(), 0u);
-    CHECK_EQ(proxy.stagedTx, CMD_NONE);
-
-    // Remote reaches the barrier → answer the sync word
-    proxy.applyNetFrame(0, stateSync, nullptr, 0, 20);
-    proxy.onRound(0x5678, 30);
-    CHECK_EQ(proxy.stagedTx, 0x5678);
-
-    // CMD_NONE exits back to packet exchange
-    proxy.onRound(CMD_NONE, 40);
-    CHECK_EQ(proxy.state, statePacketXg);
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// INTERSYNC: burst accumulation, flush, replay, fallback echo (gpsp 508-525)
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testIntersync()
-{
-    std::vector<CapturedFrame> frames;
-    AwProxy proxy;
-    proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-    proxy.gbaIsMaster = true;
-    proxy.emit = &captureEmit;
-    proxy.emitCtx = &frames;
-
-    // Reach SYNC, remote follows, then a non-sync word enters INTERSYNC
-    proxy.onRound(0x5678, 0);
-    proxy.applyNetFrame(0, stateSync, nullptr, 0, 5);
-    proxy.onRound(0x5678, 10);
-    frames.clear();
-
-    proxy.onRound(0x8801, 20);
-    CHECK_EQ(proxy.state, stateIntersync);
-    CHECK_EQ(frames.size(), 1u);          // INTERSYNC state announcement
-    CHECK_EQ(frames[0].state, stateIntersync);
-    // gbaIsMaster: the entry word is announced but not accumulated
-    // (master_send semantics); idle response echoes its command class
-    CHECK_EQ(proxy.stagedTx, 0x8800);
-    CHECK_EQ(proxy.counters.fallbackEcho, 1u);
-
-    // Burst: accumulate words with low bits set, flush on low-bits-clear
-    frames.clear();
-    proxy.onRound(0x8801, 30);
-    proxy.onRound(0x8802, 40);
-    CHECK_EQ(frames.size(), 0u);
-    proxy.onRound(0x8800, 50);
-    CHECK_EQ(frames.size(), 1u);
-    CHECK_EQ(frames[0].state, stateIntersync);
-    CHECK_EQ(frames[0].cmd, 0x8802);      // cmd carries the previous word
-    CHECK(frames[0].words == std::vector<uint16_t>({ 0x8801, 0x8802 }));
-
-    // Replay of remote burst words, then fallback echo when drained
-    const uint16_t remoteWords[2] = { 0x9001, 0x9002 };
-    proxy.applyNetFrame(0x9000, stateIntersync, remoteWords, 2, 60);
-    proxy.onRound(0x8801, 70);
-    CHECK_EQ(proxy.stagedTx, 0x9001);
-    proxy.onRound(0x8802, 80);
-    CHECK_EQ(proxy.stagedTx, 0x9002);
-    proxy.onRound(0x8803, 90);
-    CHECK_EQ(proxy.stagedTx, 0x8800);     // drained → class echo of 0x8803
-
-    // CMD_NOP keeps the state, any other word exits to PACKETXG
-    proxy.onRound(CMD_NOP, 100);
-    CHECK_EQ(proxy.state, stateIntersync);
-    proxy.onRound(0x4321, 110);
-    CHECK_EQ(proxy.state, statePacketXg);
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// PACKETXG replay: queued packet pops word-by-word with a CMD_NONE
-// terminator; idle answers depend on the remote's state (gpsp 462-484)
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testPacketReplay()
-{
-    AwProxy proxy;
-    proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-    proxy.gbaIsMaster = true;
-
-    // Idle with no queued data and remote in PACKETXG
-    proxy.onRound(CMD_NONE, 0);
-    CHECK_EQ(proxy.stagedTx, CMD_NONE);
-
-    // Remote packet: cnt=5 → queued as [6, cmd, words...]
-    const uint16_t pkt[5] = { 0x0003, 0xAAAA, 0xBBBB, 0xCCCC, 0xDDDD };
-    proxy.applyNetFrame(0x4FFF, statePacketXg, pkt, 5, 10);
-
-    const uint16_t expected[7] = { 0x4FFF, 0x0003, 0xAAAA, 0xBBBB,
-                                   0xCCCC, 0xDDDD, CMD_NONE };
-    for (int i = 0; i < 7; i++)
-    {
-        proxy.onRound(CMD_NONE, 20 + i);
-        CHECK_EQ(proxy.stagedTx, expected[i]);
-    }
-
-    // Drained again → CMD_NONE; once the remote reaches SYNC, idle answers
-    // the sync word so the local game can follow it into the barrier
-    proxy.onRound(CMD_NONE, 100);
-    CHECK_EQ(proxy.stagedTx, CMD_NONE);
-    proxy.applyNetFrame(0, stateSync, nullptr, 0, 110);
-    proxy.onRound(CMD_NONE, 120);
-    CHECK_EQ(proxy.stagedTx, 0x5678);
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// Role asymmetry: update() re-processes the SYNC-exit word, master_send()
-// does not (gpsp 586-667 vs 492-561)
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testRoleSyncExit()
-{
-    for (int isMaster = 0; isMaster <= 1; isMaster++)
-    {
-        std::vector<CapturedFrame> frames;
-        AwProxy proxy;
-        proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-        proxy.gbaIsMaster = (isMaster == 1);
+        proxy.cfg = AwConfig::forVariant(variant);
+        proxy.gbaIsMaster = (seat == 0);
+        proxy.peerCount = players - 1;
         proxy.emit = &captureEmit;
-        proxy.emitCtx = &frames;
-
-        proxy.onRound(0x5678, 0);         // enter SYNC
-        frames.clear();
-
-        // Entry word into INTERSYNC: announcement always; only the slave-GBA
-        // role (update() semantics) also accumulates the word
-        proxy.onRound(0x8801, 10);
-        CHECK_EQ(frames.size(), 1u);
-        CHECK_EQ(frames[0].state, stateIntersync);
-        CHECK_EQ(proxy.accumCount, isMaster ? 0 : 1);
-
-        // SYNC exit via CMD_NONE: only the slave-GBA role re-processes the
-        // word through PACKETXG (emitting a word update with the new state)
-        std::vector<CapturedFrame> frames2;
-        AwProxy proxy2;
-        proxy2.cfg = AwConfig::forVariant(GameVariant::aw1);
-        proxy2.gbaIsMaster = (isMaster == 1);
-        proxy2.emit = &captureEmit;
-        proxy2.emitCtx = &frames2;
-
-        proxy2.onRound(0x5678, 0);
-        proxy2.onRound(CMD_NONE, 10);
-        CHECK_EQ(proxy2.state, statePacketXg);
-        CHECK_EQ(frames2.size(), isMaster ? 0u : 1u);
-        if (!isMaster && frames2.size() == 1)
-        {
-            CHECK_EQ(frames2[0].cmd, CMD_NONE);
-            CHECK_EQ(frames2[0].state, statePacketXg);
-        }
+        proxy.emitCtx = &sent;
     }
-}
 
-//-//////////////////////////////////////////////////////////////////////////-//
-// popReplay idle gate: gpsp's process_awpeer gates the sync answer on
-// peer[0].pstate == COMMANDS, which is the live local parse state on its
-// master instance but never written (always COMMANDS) on slave instances
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testIdleGateRoles()
-{
-    for (int isMaster = 0; isMaster <= 1; isMaster++)
+    // One transfer: the GBA sends word and gets what was staged for the other slots.
+    std::vector<uint16_t> transfer(uint16_t word)
     {
-        AwProxy proxy;
-        proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-        proxy.gbaIsMaster = (isMaster == 1);
-
-        proxy.applyNetFrame(0, stateSync, nullptr, 0, 0);
-
-        // Idle between packets: both roles answer the sync word
-        proxy.onRound(CMD_NONE, 10);
-        CHECK_EQ(proxy.stagedTx, 0x5678);
-
-        // Mid-packet (parse state not COMMANDS): only the master-GBA role
-        // suppresses the sync answer
-        proxy.onRound(0x4F00, 20);
-        CHECK_EQ(proxy.stagedTx, isMaster ? CMD_NONE : 0x5678);
+        std::vector<uint16_t> got(proxy.stagedTx, proxy.stagedTx + proxy.peerCount);
+        proxy.onRound(word, ms);
+        return got;
     }
-}
 
-//-//////////////////////////////////////////////////////////////////////////-//
-// Replay queue edge cases
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void testQueueEdges()
-{
-    AwProxy proxy;
-    proxy.cfg = AwConfig::forVariant(GameVariant::aw1);
-    proxy.gbaIsMaster = true;
-
-    // cnt < 2 frames update remote state only (gpsp's cnt >= 2 guards)
-    const uint16_t one[1] = { 0x9001 };
-    proxy.applyNetFrame(0, stateIntersync, one, 1, 0);
-    CHECK_EQ(proxy.rqCount, 0);
-    CHECK_EQ(proxy.remoteState, stateIntersync);
-
-    // Queue overflow: frames that don't fit are dropped whole
-    const uint16_t big[200] = {};
-    proxy.applyNetFrame(0, stateIntersync, big, 200, 10);  // 201 words
-    proxy.applyNetFrame(0, stateIntersync, big, 200, 20);  // 402 words
-    CHECK_EQ(proxy.rqCount, 402);
-    proxy.applyNetFrame(0, stateIntersync, big, 200, 30);  // would be 603
-    CHECK_EQ(proxy.rqCount, 402);
-    CHECK_EQ(proxy.counters.rxDropQueueFull, 1u);
-
-    // lastHeardMs of 0 is reserved for "never heard"
-    AwProxy p2;
-    p2.applyNetFrame(0, statePacketXg, nullptr, 0, 0);
-    CHECK_EQ(p2.lastHeardMs, 1u);
-}
-
-//-//////////////////////////////////////////////////////////////////////////-//
-// End-to-end: two proxies back-to-back replay a packet across the "network"
-//-//////////////////////////////////////////////////////////////////////////-//
-
-static void pipeEmit(void* ctx, uint16_t cmd, uint8_t state,
-                     const uint16_t* words, uint16_t cnt)
-{
-    auto* peer = static_cast<AwProxy*>(ctx);
-    peer->applyNetFrame(cmd, state, words, cnt, 1);
-}
-
-static void testEndToEnd()
-{
-    AwProxy a;  // adapter in SLAVE mode: GBA-A is bus master
-    a.cfg = AwConfig::forVariant(GameVariant::aw2);
-    a.gbaIsMaster = true;
-
-    AwProxy b;  // adapter in MASTER mode: GBA-B is bus slave
-    b.cfg = AwConfig::forVariant(GameVariant::aw2);
-    b.gbaIsMaster = false;
-
-    a.emit = &pipeEmit; a.emitCtx = &b;
-    b.emit = &pipeEmit; b.emitCtx = &a;
-
-    // GBA-A sends a packet (e.g. its save-name block): 0x4Fxx, size, body+tail
-    uint32_t t = 0;
-    a.onRound(0x4F08, t += 10);
-    a.onRound(0x0002, t += 10);
-    a.onRound(0x6161, t += 10);           // payload
-    a.onRound(0x6262, t += 10);
-    a.onRound(0x0000, t += 10);           // AW2 tail word 1
-    a.onRound(0x1111, t += 10);           // AW2 tail word 2 → packet complete
-
-    // GBA-B idles; its adapter replays the packet exactly as A's GBA sent it
-    const uint16_t expected[7] = { 0x4FFF, 0x0002, 0x6161, 0x6262,
-                                   0x0000, 0x1111, CMD_NONE };
-    for (int i = 0; i < 7; i++)
+    // Transfers of one word each; returns what the GBA got from one peer.
+    std::vector<uint16_t> send(const std::vector<uint16_t>& words, uint8_t peer = 0)
     {
-        b.onRound(CMD_NONE, t += 10);
-        CHECK_EQ(b.stagedTx, expected[i]);
+        std::vector<uint16_t> got;
+        for (uint16_t word : words) got.push_back(transfer(word)[peer]);
+        return got;
     }
 
-    // Both games reach the sync barrier and answer each other's sync word
-    a.onRound(0x9ABC, t += 10);
-    a.onRound(0x9ABC, t += 10);           // announcement round
-    b.onRound(0x9ABC, t += 10);
-    b.onRound(0x9ABC, t += 10);
-    a.onRound(0x9ABC, t += 10);
-    CHECK_EQ(a.state, stateSync);
-    CHECK_EQ(b.state, stateSync);
-    CHECK_EQ(a.stagedTx, 0x9ABC);
-    CHECK_EQ(b.stagedTx, 0x9ABC);
+    // The frames with words: packets and presses.
+    std::vector<CapturedFrame> data() const
+    {
+        std::vector<CapturedFrame> out;
+        for (const auto& frame : sent) if (!frame.words.empty()) out.push_back(frame);
+        return out;
+    }
+};
+
+// Hands the frames one player sent to another, as its peer `peer`.
+static void deliver(Link& from, Link& to, uint8_t peer = 0)
+{
+    for (const auto& f : from.sent)
+    {
+        to.proxy.applyNetFrame(peer, f.cmd, f.state, f.words.data(), static_cast<uint16_t>(f.words.size()), to.ms);
+    }
+}
+
+static void delivered(Link& from) { from.sent.clear(); }
+
+// A game's packet as it sends it: the start word, the size, the checksum
+// words and the data.
+static std::vector<uint16_t> packet(const std::vector<uint16_t>& data, GameVariant variant = GameVariant::aw1)
+{
+    std::vector<uint16_t> out = { START, static_cast<uint16_t>(data.size()), 0xC1C1 };
+    if (variant == GameVariant::aw2) out.push_back(0xC2C2);
+    out.insert(out.end(), data.begin(), data.end());
+    return out;
+}
+
+static std::vector<uint16_t> repeat(uint16_t word, size_t count) { return std::vector<uint16_t>(count, word); }
+
+static std::vector<uint16_t> join(std::initializer_list<std::vector<uint16_t>> parts)
+{
+    std::vector<uint16_t> out;
+    for (const auto& part : parts) out.insert(out.end(), part.begin(), part.end());
+    return out;
+}
+
+static std::vector<uint16_t> slice(const std::vector<uint16_t>& words, size_t from, size_t count)
+{
+    return std::vector<uint16_t>(words.begin() + from, words.begin() + from + count);
+}
+
+//-//////////////////////////////////////////////////////////////////////////-//
+// Packets
+//-//////////////////////////////////////////////////////////////////////////-//
+
+static void testPacket(GameVariant variant)
+{
+    Link a(variant, 0, 2), b(variant, 1, 2);
+    std::vector<uint16_t> data;
+    for (uint16_t i = 0; i < 0x42; i++) data.push_back(0x1000 + i);
+    const auto sentWords = packet(data, variant);
+
+    a.send(join({ { CMD_NONE }, sentWords, { CMD_NONE } }));
+    const auto frames = a.data();
+    CHECK_EQ(frames.size(), 1u);
+    if (frames.size() != 1) return;
+    CHECK_EQ(frames[0].cmd, START);
+    CHECK_EQ(frames[0].state, statePacketXg);
+    CHECK(frames[0].words == slice(sentWords, 1, sentWords.size() - 1));
+
+    // Replayed a transfer late, then one idle word
+    deliver(a, b);
+    const auto got = b.send(repeat(CMD_NONE, sentWords.size() + 3));
+    CHECK(got == join({ { CMD_NONE }, sentWords, { CMD_NONE, CMD_NONE } }));
+}
+
+static void testLoneStartWord()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    const auto sentWords = packet({ 0x0036, 0x0001 });
+    // The idle word after a start word is no size; nor is a second start word
+    a.send(join({ { START, CMD_NONE, CMD_NONE, START }, sentWords, { CMD_NONE } }));
+    CHECK_EQ(a.data().size(), 1u);
+    deliver(a, b);
+    const auto got = b.send(repeat(CMD_NONE, 8));
+    CHECK(slice(got, 1, sentWords.size()) == sentWords);
+}
+
+static void testPacketGivenUpForBarrier()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    const uint16_t sync = a.proxy.cfg.syncWord;
+    a.send({ START, 0x000D, 0xC1C1, 0x003F, 0x0000, sync, sync, sync });
+    CHECK_EQ(a.data().size(), 0u);
+    CHECK_EQ(a.proxy.state, stateSync);
+    deliver(a, b);
+    CHECK_EQ(b.send({ CMD_NONE, CMD_NONE })[1], sync);
+}
+
+//-//////////////////////////////////////////////////////////////////////////-//
+// Sync barrier
+//-//////////////////////////////////////////////////////////////////////////-//
+
+static void testBarrier()
+{
+    Link a(GameVariant::aw1, 0, 3), b(GameVariant::aw1, 1, 3), c(GameVariant::aw1, 2, 3);
+    const uint16_t sync = a.proxy.cfg.syncWord;
+
+    // The leader keeps sending packets; b's game already waits at the barrier
+    a.send(packet({ 0x003A, 0x0000 }));
+    deliver(a, b, 0); deliver(a, c, 0); delivered(a);
+    const auto atB = b.send({ sync, CMD_NOP, sync, CMD_NOP });
+    CHECK(atB == std::vector<uint16_t>({ CMD_NONE, START, 2, 0xC1C1 }));   // still given the leader's packet
+    deliver(b, a, 0); deliver(b, c, 1); delivered(b);
+    CHECK(a.send({ CMD_NONE, CMD_NONE }, 0) == std::vector<uint16_t>({ CMD_NONE, sync }));   // the leader is told at once
+    CHECK_EQ(a.transfer(CMD_NONE)[1], CMD_NONE);                           // c isn't there yet
+
+    c.send({ sync, CMD_NOP, sync, CMD_NOP, sync, CMD_NOP, sync, CMD_NOP, sync });
+    deliver(c, a, 1); deliver(c, b, 1); delivered(c);
+    a.transfer(CMD_NONE);
+    CHECK_EQ(a.proxy.stagedTx[0], sync);
+    CHECK_EQ(a.proxy.stagedTx[1], sync);
+
+    // The leader joins: every game sees the sync word in every slot
+    a.send({ sync, sync, sync });
+    deliver(a, b, 0); deliver(a, c, 0); delivered(a);
+    b.send({ sync, CMD_NOP, sync, CMD_NOP, sync, CMD_NOP, sync });
+    deliver(b, a, 0); deliver(b, c, 1); delivered(b);
+    c.transfer(sync);
+    CHECK_EQ(b.proxy.state, stateSync);
+    CHECK_EQ(b.proxy.stagedTx[0], sync);
+    CHECK_EQ(b.proxy.stagedTx[1], sync);
+    CHECK_EQ(c.proxy.stagedTx[0], sync);
+    CHECK_EQ(c.proxy.stagedTx[1], sync);
+    CHECK_EQ(b.proxy.stagedTiming, timingSync);
+}
+
+//-//////////////////////////////////////////////////////////////////////////-//
+// Key exchange
+//-//////////////////////////////////////////////////////////////////////////-//
+
+// Takes both games through the barrier into the key exchange, at screen 0x8800.
+static void exchangeKeys(Link& a, Link& b)
+{
+    const uint16_t sync = a.proxy.cfg.syncWord;
+    a.send({ sync, sync });
+    deliver(a, b); delivered(a);
+    b.send({ sync, sync });
+    deliver(b, a); delivered(b);
+    a.send({ sync, 0x8800, 0x8800 });
+    b.send({ sync, 0x8800, 0x8800 });
+    deliver(a, b); delivered(a);
+    deliver(b, a); delivered(b);
+}
+
+static void testKeys()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    exchangeKeys(a, b);
+    CHECK_EQ(a.proxy.state, stateIntersync);
+    CHECK_EQ(b.proxy.state, stateIntersync);
+
+    // Two presses of A that arrive together stay two presses
+    a.send({ 0x8801, 0x8801, 0x8801, 0x8800, 0x8801, 0x8801, 0x8800 });
+    deliver(a, b); delivered(a);
+    const auto got = b.send(repeat(0x8800, 9));
+    CHECK(slice(got, 1, 8) == std::vector<uint16_t>({ 0x8801, 0x8801, 0x8801, 0x8800, 0x8801, 0x8801, 0x8800, 0x8800 }));
+
+    // A press of one transfer crosses
+    a.send({ 0x8802, 0x8800 });
+    deliver(a, b); delivered(a);
+    const auto tap = b.send(repeat(0x8800, 4));
+    CHECK_EQ(tap[1], 0x8802);
+}
+
+static void testLongPress()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    exchangeKeys(a, b);
+
+    const size_t held = 400;
+    a.send(join({ repeat(0x8880, held), { 0x8800 } }));
+    const auto parts = a.data();
+    CHECK(parts.size() > 1);
+    size_t total = 0;
+    for (const auto& part : parts)
+    {
+        CHECK(part.words.size() <= maxFrameWords);
+        total += part.words.size();
+    }
+    CHECK_EQ(total, held);
+    CHECK_EQ(parts.front().cmd, keysContinue);
+    CHECK(parts.back().cmd != keysContinue);
+
+    // Replayed as long as it was, without a break
+    deliver(a, b); delivered(a);
+    const auto got = b.send(repeat(0x8800, held + 60));
+    size_t first = 0;
+    while (first < got.size() && got[first] != 0x8880) first++;
+    CHECK(first > 0 && first + held < got.size());
+    if (first + held >= got.size()) return;
+    CHECK(slice(got, first, held) == repeat(0x8880, held));
+    CHECK_EQ(got[first + held], 0x8800);
+}
+
+static void testLatePartStaysHeld()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    exchangeKeys(a, b);
+
+    a.send(repeat(0x8880, 200));
+    deliver(a, b); delivered(a);
+    const auto early = b.send(repeat(0x8800, 180));
+    CHECK_EQ(early.back(), 0x8880);
+    a.send(join({ repeat(0x8880, 50), { 0x8800 } }));
+    deliver(a, b); delivered(a);
+    const auto rest = b.send(repeat(0x8800, 200));
+    size_t run = 0, longest = 0;
+    for (uint16_t word : join({ early, rest }))
+    {
+        run = (word == 0x8880) ? run + 1 : 0;
+        if (run > longest) longest = run;
+    }
+    CHECK(longest >= 250);
+    CHECK_EQ(rest.back(), 0x8800);
+}
+
+static void testSkippedFrame()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    exchangeKeys(a, b);
+
+    // B held over a transfer for which the game has no word ready
+    a.send({ 0x8802, 0x8802, CMD_NOP, 0x8802, 0x8800 });
+    deliver(a, b); delivered(a);
+    size_t pressed = 0;
+    for (uint16_t word : b.send(repeat(0x8800, 10))) if (word == 0x8802) pressed++;
+    CHECK_EQ(pressed, 4u);
+
+    // The other player's idle word is always a key word of the game's own screen number
+    const auto echo = a.send({ CMD_NOP, 0x8800, CMD_NOP, CMD_NOP, 0x8C00, 0x8C00 });
+    CHECK(slice(echo, 1, 5) == std::vector<uint16_t>({ 0x8800, 0x8800, 0x8800, 0x8800, 0x8C00 }));
+}
+
+static void testKeysWaitAtBarrier()
+{
+    Link a(GameVariant::aw1, 0, 2), b(GameVariant::aw1, 1, 2);
+    const uint16_t sync = a.proxy.cfg.syncWord;
+
+    // b's game waits at the barrier and is still given the leader's packet
+    // when the leader, through it already, presses A
+    std::vector<uint16_t> data;
+    for (uint16_t i = 0; i < 0x20; i++) data.push_back(i);
+    a.send(packet(data));
+    deliver(a, b); delivered(a);
+    b.send({ sync, CMD_NOP, sync });
+    deliver(b, a); delivered(b);
+    a.send({ sync, sync, sync, 0x8800, 0x8801, 0x8801, 0x8800 });
+    deliver(a, b); delivered(a);
+
+    std::vector<uint16_t> words;
+    for (int i = 0; i < 60; i++) words.push_back(i % 2 ? CMD_NOP : sync);
+    const auto got = b.send(join({ words, repeat(0x8800, 5) }));
+    bool sawSync = false;
+    size_t pressed = 0;
+    for (uint16_t word : got) if (word == sync) sawSync = true;
+    for (size_t i = got.size() - 4; i < got.size(); i++) if (got[i] == 0x8801) pressed++;
+    CHECK(sawSync);
+    CHECK_EQ(pressed, 2u);
+}
+
+static void testFirstWordAfterKeys(GameVariant variant)
+{
+    Link a(variant, 0, 2), b(variant, 1, 2);
+    const uint16_t sync = a.proxy.cfg.syncWord;
+    const std::vector<uint16_t> through = { sync, sync, sync, 0x8800, 0x8800 };
+    a.send({ sync, sync });
+    deliver(a, b); delivered(a);
+    b.send(through);
+    deliver(b, a); delivered(b);
+    a.send(through);
+    a.sent.clear();
+
+    // Straight from keys into a packet, and from keys to the next barrier
+    const auto sentWords = packet({ 0x003A, 0x0000 }, variant);
+    a.send(join({ sentWords, { 0x8800 } }));
+    const auto frames = a.data();
+    CHECK_EQ(frames.size(), 1u);
+    if (frames.size() == 1) CHECK(frames[0].words == slice(sentWords, 1, sentWords.size() - 1));
+    b.send({ 0x8800, sync, CMD_NOP, sync });
+    CHECK_EQ(b.sent.back().state, stateSync);
+}
+
+//-//////////////////////////////////////////////////////////////////////////-//
+// Four players
+//-//////////////////////////////////////////////////////////////////////////-//
+
+static void testFourPlayers()
+{
+    Link a(GameVariant::aw1, 0, 4), b(GameVariant::aw1, 1, 4), c(GameVariant::aw1, 2, 4);
+    std::vector<uint16_t> dataB, dataC;
+    for (uint16_t i = 0; i < 0x30; i++) { dataB.push_back(0xB000 + i); dataC.push_back(0xC000 + i); }
+    const auto fromB = packet(dataB), fromC = packet(dataC);
+    b.send(fromB);
+    c.send(fromC);
+    deliver(b, a, 0);
+    deliver(c, a, 1);
+
+    std::vector<uint16_t> slotB, slotC;
+    for (size_t i = 0; i < fromB.size() + 2; i++)
+    {
+        const auto got = a.transfer(CMD_NONE);
+        slotB.push_back(got[0]);
+        slotC.push_back(got[1]);
+        CHECK_EQ(got[2], CMD_NONE);   // the fourth player is idle
+    }
+    CHECK(slice(slotB, 1, fromB.size()) == fromB);
+    CHECK(slice(slotC, 1, fromC.size()) == fromC);
+}
+
+static void testAnnouncements()
+{
+    Link a(GameVariant::aw1, 0, 2);
+    a.send(repeat(CMD_NONE, 50));
+    CHECK_EQ(a.sent.size(), 1u);          // the idle state once
+    a.ms += keepaliveMs;
+    a.transfer(CMD_NONE);
+    CHECK_EQ(a.sent.size(), 2u);          // and again to be heard
 }
 
 int main()
 {
     testFraming();
-    testPacketCapture(GameVariant::aw1);
-    testPacketCapture(GameVariant::aw2);
-    testWordUpdateDedup();
-    testSyncBarrier();
-    testIntersync();
-    testPacketReplay();
-    testRoleSyncExit();
-    testIdleGateRoles();
-    testQueueEdges();
-    testEndToEnd();
+    testPacket(GameVariant::aw1);
+    testPacket(GameVariant::aw2);
+    testLoneStartWord();
+    testPacketGivenUpForBarrier();
+    testBarrier();
+    testKeys();
+    testLongPress();
+    testLatePartStaysHeld();
+    testSkippedFrame();
+    testKeysWaitAtBarrier();
+    testFirstWordAfterKeys(GameVariant::aw1);
+    testFirstWordAfterKeys(GameVariant::aw2);
+    testFourPlayers();
+    testAnnouncements();
 
     if (g_failures == 0)
     {

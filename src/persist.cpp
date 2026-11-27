@@ -1,11 +1,5 @@
 #include "persist.hpp"
 #include "hardware.hpp"
-
-extern "C"
-{
-    #include "layers/linkLayer.h" // CABLE_* selection values
-}
-
 #include <cstring>
 #include <zephyr/storage/flash_map.h>
 
@@ -14,7 +8,7 @@ namespace
     #define STORAGE_PARTITION_ID FIXED_PARTITION_ID(storage_partition)
 
     constexpr uint8_t SETTINGS_MAGIC = 0x5A;
-    constexpr uint8_t SETTINGS_VERSION = 7; // bumped for the cable selection
+    constexpr uint8_t SETTINGS_VERSION = 8; // bumped for Battle Chip Gate deep-blue default
 
     struct PersistSettings
     {
@@ -22,7 +16,7 @@ namespace
         uint8_t version;
         uint8_t landing;                       // 0 = disabled, else enabled
         uint8_t led[LED_SLOT_COUNT][3];        // per-slot logical RGB
-        uint8_t cable;                         // CABLE_* SD-pin selection
+        // Up to 2.2.8 the next byte held the cable selection: a field added here needs a version bump.
     };
 
     // Real-colour defaults at a uniform 12.5% brightness (32/255) so every mode's
@@ -34,6 +28,7 @@ namespace
         { 32,  0,   32  }, // printer — purple
         { 32,  32,  32  }, // Advance Wars — white
         { 0,   10,  32  }, // e-reader — light blue
+        { 2,   4,   32  }, // Battle Chip Gate — deep blue
     };
 
     void fillDefaults(PersistSettings& s)
@@ -42,12 +37,10 @@ namespace
         s.version = SETTINGS_VERSION;
         s.landing = 1;
         memcpy(s.led, kDefaultColors, sizeof(s.led));
-        s.cable = CABLE_FORCE_GBC;
     }
 
     // Defaults when flash is unwritten; older layouts migrate in place (written
-    // back on the next save). Pre-v7 loads cable = auto-detect so an updated
-    // adapter keeps its pre-selection behavior.
+    // back on the next save).
     PersistSettings loadSettings()
     {
         PersistSettings s{};
@@ -61,15 +54,14 @@ namespace
 
         if (s.magic != SETTINGS_MAGIC) {
             fillDefaults(s);
-        } else if (s.version == 6) {
-            // v6 = v7 minus the cable byte — keep the user's values. Literal 7:
-            s.version = 7;
-            s.cable = CABLE_AUTO;
+        } else if (s.version == 6 || s.version == 7) {
+            // No Battle Chip Gate slot yet (v7 kept its cable selection there).
+            s.version = SETTINGS_VERSION;
+            memcpy(s.led[LED_SLOT_BATTLE_CHIP_GATE],
+                   kDefaultColors[LED_SLOT_BATTLE_CHIP_GATE], 3);
         } else if (s.version != SETTINGS_VERSION) {
             fillDefaults(s);
-            s.cable = CABLE_AUTO;
         }
-        if (s.cable > CABLE_FORCE_GBC) s.cable = CABLE_FORCE_GBC;
         return s;
     }
 
@@ -95,20 +87,6 @@ void setLandingPageEnabled(bool enabled)
 {
     PersistSettings s = loadSettings();
     s.landing = enabled ? 1 : 0;
-    saveSettings(s);
-}
-
-uint8_t getCableSelection()
-{
-    return loadSettings().cable;
-}
-
-void setCableSelection(uint8_t cable)
-{
-    if (cable > CABLE_FORCE_GBC) return;
-    PersistSettings s = loadSettings();
-    if (s.cable == cable) return; // skip the sector erase on a no-op
-    s.cable = cable;
     saveSettings(s);
 }
 

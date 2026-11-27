@@ -1,0 +1,5 @@
+zephyr_library_sources(blockCommand.cpp)
+zephyr_library_sources(emptyCommand.cpp)
+zephyr_library_sources(readyExitStandbyCommand.cpp)
+zephyr_library_sources(readyCloseLinkCommand.cpp)
+zephyr_library_sources(usbLinkCommand.cpp)

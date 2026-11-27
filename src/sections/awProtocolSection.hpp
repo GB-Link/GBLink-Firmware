@@ -1,20 +1,16 @@
 
 #include <cstdint>
 #include <span>
-
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
-
 #include <zephyr/kernel.h>
 
+#include "../layers/link/multiMode/multiMode.hpp"
 #include "awProtocol.hpp"
 
 #pragma once
 
 // Zephyr glue around awproto::AwProxy: PIO link callbacks on the GBA side,
-// MAW1 frame stream over the 64-byte data transport on the network side.
+// the players' MAW1 frame streams over the 51-byte data transport on the
+// network side. Every transport packet starts with the seat it comes from.
 //
 // The proxy, stream parser, and outbound ring live in file-scope statics
 // (like the section message queues elsewhere in this codebase) so the ISR
@@ -27,11 +23,12 @@ extern "C"
 //   receiveCallback   PIO done-ISR  FSM step + stage next response
 //   emit (via proxy)  PIO done-ISR  serialize frame into the outbound ring
 //   awProto_receiveHandler  USB thread / UART ISR  parse frames, push queue
-//   process()         module thread drain ring → 64-byte chunks → transport
+//   process()         module thread drain ring → 51-byte chunks → transport
 class AwProtocolSection
 {
 public:
-    AwProtocolSection(awproto::GameVariant variant, enum LinkMode linkMode);
+    // seat: the GBA's, 0 for the bus master (player 1). playerCount: 2 to 4.
+    AwProtocolSection(awproto::GameVariant variant, uint8_t seat, uint8_t playerCount);
     ~AwProtocolSection();
 
     void process();
@@ -44,11 +41,14 @@ private:
     bool m_cancel = false;
     bool m_reportedReconnecting = false;
 
-    // Transport chunk being filled from the outbound ring. Frames may span
-    // chunks; a chunk's unused tail is zero-padded (the remote stream parser
-    // skips padding while seeking the frame magic).
-    uint8_t m_chunk[64];
-    size_t m_chunkLen = 0;
+    // Transport chunk being filled from the outbound ring: the seat, then the
+    // frame stream. Frames may span chunks; a chunk's unused tail is
+    // zero-padded (the remote stream parser skips padding while seeking the
+    // frame magic). 51 bytes: the Celio client and server carry data in
+    // packets of that size.
+    static constexpr size_t chunkHeader = 1;
+    uint8_t m_chunk[51];
+    size_t m_chunkLen = chunkHeader;
 };
 
 void awProto_receiveHandler(std::span<const uint8_t> data, void*);

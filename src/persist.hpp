@@ -13,18 +13,15 @@ enum LedSlot : uint8_t {
     LED_SLOT_GBC = 2,         // GB/GBC link (blue)
     LED_SLOT_PRINTER = 3,     // GB printer (purple)
     LED_SLOT_ADVANCE_WARS = 4,// Advance Wars (white)
-    LED_SLOT_EREADER = 5,
-    LED_SLOT_COUNT = 6,
+    LED_SLOT_EREADER = 5,  // e-Reader (light blue)
+    LED_SLOT_BATTLE_CHIP_GATE = 6, // Battle Chip Gate (deep blue)
+    LED_SLOT_COUNT = 7,
 };
 
 // WebUSB landing-page advertising. Default (unwritten flash) is enabled.
 bool landingPageEnabled();
 void setLandingPageEnabled(bool enabled);
 
-// Cable/SD-pin selection for GBA modes (CABLE_*), applied at boot as the cable
-// override. Fresh installs default to GBC; pre-v7 settings load as auto-detect.
-uint8_t getCableSelection();
-void setCableSelection(uint8_t cable); // out-of-range values ignored
 
 // Per-mode LED colours (logical RGB, 0-255; the WS2812 driver does GRB packing).
 void getLedColor(uint8_t slot, uint8_t out[3]);

@@ -1,16 +1,16 @@
-#include "layers/usbLayer.hpp"
-#include "layers/serialLayer.hpp"
 #include "layers/transport.hpp"
-#include "layers/packetLayer.hpp"
+#include "layers/packet/packetLayer.hpp"
 #include "module/link.hpp"
-#include "module/emu.hpp"
 #include "module/gb.hpp"
 #include "module/advanceWars.hpp"
 #include "module/eReader.hpp"
+#include "module/battleChipGate.hpp"
+#include "module/rfuWireless.hpp"
 #include "sections/eReaderProtocolSection.hpp"
+#include "sections/battleChipGateSection.hpp"
+#include "sections/rfuProtocolSection.hpp"
 #include "linkStatus.hpp"
-#include "callbacks/commands.hpp"
-#include "payloads/pokemon.hpp"
+#include "layers/packet/packetCommands/commands.hpp"
 #include "module/moduleInterface.hpp"
 #include "hardware.hpp"
 #include "persist.hpp"
@@ -28,12 +28,13 @@ class Control
 
     enum class Mode
     {
-        gbaTradeEmu = 0x00,
         gbaLink = 0x01,
         gbLink = 0x02,
         gbPrinter = 0x03,
         advanceWars = 0x04,
         gbaEreader = 0x05,
+        battleChipGate = 0x06,
+        rfuWireless = 0x07,
     };
 
     static constexpr uint8_t callSetModeId = 0x01;
@@ -44,9 +45,6 @@ public:
         Transport::registerCommandHandler(receiveCommandHandler, this);
 
         k_sem_init(&m_waitForModeSemaphore, 0, 1);
-
-        // Persisted cable selection = boot default for the session override.
-        link_setCableOverride(getCableSelection());
     }
 
     void executeMode()
@@ -57,30 +55,16 @@ public:
         // must not clobber it below. The variant travels with the mode.
         const Mode mode = m_mode;
         const uint8_t modeVariant = m_modeVariant;
+        if (mode != m_previousMode) link_forgetSdPin();
+        m_previousMode = mode;
+
         sendLinkStatus(LinkStatus::DeviceReady);
 
         switch (mode)
         {
-            case Mode::gbaTradeEmu:
-            {
-                applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
-
-                party::partyInit();
-                Transport::registerDataHandler(party::usbReceivePkmFile, nullptr);
-
-                EmuModule emuModule;
-                m_currentModule = &emuModule;
-                emuModule.execute();
-
-                sendLinkStatus(LinkStatus::EmuTradeSessionFinished);
-                break;
-            }
-
             case Mode::gbaLink:
             {
                 applyLedForSlot(LED_SLOT_GBA);
-                link_detectCableType();
 
                 Transport::registerDataHandler(usbLink_receiveHandler, nullptr);
 
@@ -115,7 +99,6 @@ public:
             case Mode::advanceWars:
             {
                 applyLedForSlot(LED_SLOT_ADVANCE_WARS);
-                link_detectCableType();
 
                 Transport::registerDataHandler(awProto_receiveHandler, nullptr);
 
@@ -132,7 +115,6 @@ public:
             case Mode::gbaEreader:
             {
                 applyLedForSlot(LED_SLOT_EREADER);
-                link_detectCableType();
 
                 Transport::registerDataHandler(erProto_receiveHandler, nullptr);
 
@@ -144,11 +126,49 @@ public:
                     modeVariant == 6 ? erproto::Profile::sma4EURFra :
                     modeVariant == 7 ? erproto::Profile::sma4EURGer :
                     modeVariant == 8 ? erproto::Profile::sma4EUREsp :
-                    modeVariant == 9 ? erproto::Profile::sma4EURIta
+                    modeVariant == 9 ? erproto::Profile::sma4EURIta :
+                    modeVariant == 10 ? erproto::Profile::pokemonEmerald :
+                    modeVariant == 11 ? erproto::Profile::pokemonEmeraldJPN :
+                    modeVariant == 12 ? erproto::Profile::pokemonEmeraldFra :
+                    modeVariant == 13 ? erproto::Profile::pokemonEmeraldGer
                                    : erproto::Profile::sma4;
                 EReaderModule ereaderModule(profile);
                 m_currentModule = &ereaderModule;
                 ereaderModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            case Mode::battleChipGate:
+            {
+                applyLedForSlot(LED_SLOT_BATTLE_CHIP_GATE);
+
+                Transport::registerDataHandler(bcgProto_receiveHandler, nullptr);
+
+                BattleChipGateModule battleChipGateModule(
+                    bcgproto::gateTypeFromVariant(modeVariant));
+                m_currentModule = &battleChipGateModule;
+                battleChipGateModule.execute();
+
+                sendLinkStatus(LinkStatus::LinkClosed);
+                break;
+            }
+
+            // Wireless adapter (AGB-015) emulation, driven over the bridge UART
+            // by a companion MCU rather than a host PC.
+            case Mode::rfuWireless:
+            {
+                // No slot of its own: the stored palette holds seven entries and
+                // an eighth would change the settings layout.
+                applyLedForSlot(LED_SLOT_GBA);
+
+                Transport::registerDataHandler(rfuProto_receiveHandler, nullptr);
+
+                // Variant = role hint for the relay: 0 symmetric, 1 host, 2 client.
+                RfuWirelessModule rfuModule(modeVariant);
+                m_currentModule = &rfuModule;
+                rfuModule.execute();
 
                 sendLinkStatus(LinkStatus::LinkClosed);
                 break;
@@ -163,6 +183,7 @@ private:
     struct k_sem m_waitForModeSemaphore;
     Mode m_mode;
     uint8_t m_modeVariant = 0;
+    std::optional<Mode> m_previousMode;
 
     IModule* m_currentModule = nullptr;
 
@@ -182,9 +203,7 @@ private:
         SetModeLedColor = 0x46,
         ResetLedColors = 0x47,
         Reboot = 0x48,
-        SetCableOverride = 0x49,
-        GetCableType = 0x4a,
-        SetCableSelection = 0x4b,
+        GetRfuIsrStats = 0x4c,
     };
 
     void receiveCommand(std::span<const uint8_t> data)
@@ -208,7 +227,10 @@ private:
             // Optional third byte selects a game variant within the mode
             // (Advance Wars: 1 = AW1, 2 = AW2; e-reader: 1 = SMA4 US,
             // 2 = Pokemon RS US, 3 = SMA4 JPN, 4 = Pokemon RS JPN,
-            // 5-9 = SMA4 EUR En/Fr/De/Es/It; defaults to the first variant
+            // 5-9 = SMA4 EUR En/Fr/De/Es/It, 10 = Pokemon Emerald US,
+            // 11 = Pokemon Emerald JPN, 12 = (Émeraude) / Emerald,
+            // 13 = (Smaragd) / Emerald;
+            // defaults to the first variant
             // for older clients that send only [command, mode]).
             case ControlCommand::SetMode:
                 if (data.size() < 2) return;
@@ -260,29 +282,22 @@ private:
                 break;
             case HardwareCommand::Reboot:
                 // Warm-reboot into the app so persisted settings apply now; no return.
-                Hardware::getInstance().reboot();
+                Hardware::getInstance().reboot(); 
                 break;
-            case HardwareCommand::SetCableOverride:
-                if (data.size() >= 2) {
-                    link_setCableOverride(data[1]);
-                }
-                break;
-            case HardwareCommand::GetCableType:
+            case HardwareCommand::GetRfuIsrStats:
             {
-                // Report-only: the cable is sampled once at mode entry (a GBA
-                // already in link mode drives SO low, which would poison a
-                // re-sample); the override command changes the path instead.
-                uint8_t resp[2] = { 0x4a, link_getDetectedCableType() };
+                // Transfer-path timing: whether replies are staged inside the
+                // GBA's inter-word gap.
+                uint32_t v[5];
+                rfuLink_isrStats(v);
+                uint8_t resp[1 + sizeof(v)];
+                resp[0] = 0x4c;
+                for (unsigned i = 0; i < 5; i++)
+                    for (unsigned b = 0; b < 4; b++)
+                        resp[1 + i * 4 + b] = static_cast<uint8_t>(v[i] >> (8 * b));
                 Transport::sendData(std::span<const uint8_t>(resp, sizeof(resp)));
                 break;
             }
-            case HardwareCommand::SetCableSelection:
-                // [0x4b, CABLE_*] — persist the cable selection and apply it now.
-                if (data.size() >= 2 && data[1] <= CABLE_FORCE_GBC) {
-                    setCableSelection(data[1]);
-                    link_setCableOverride(data[1]);
-                }
-                break;
             default: break;
         }
     }
@@ -331,9 +346,7 @@ private:
             fw::versionPatch,
             // Byte 4: WebUSB landing-page enabled (1) / disabled (0). Older web
             // apps simply ignore the extra byte.
-            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0),
-            // Byte 5: persisted cable selection (CABLE_*).
-            getCableSelection()
+            static_cast<uint8_t>(landingPageEnabled() ? 1 : 0)
         };
         Transport::sendData(std::span<const uint8_t>(info, sizeof(info)));
     }

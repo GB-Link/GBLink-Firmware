@@ -7,10 +7,6 @@
 
 #include <zephyr/kernel.h>
 
-extern "C"
-{
-    #include "../layers/linkLayer.h"
-}
 
 class EReaderProtocolSection
 {
@@ -18,7 +14,7 @@ public:
     EReaderProtocolSection(erproto::Profile profile);
     ~EReaderProtocolSection();
 
-    // Detects the cable and arms the profile's PIO link (sleeps ~200ms for the
+    // Arms the profile's PIO link (sleeps ~200ms for the
     // Pokemon partner-presence window); call from the module thread before
     // process().
     void armLink();

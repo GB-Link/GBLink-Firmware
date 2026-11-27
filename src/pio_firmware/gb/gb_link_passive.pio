@@ -1,0 +1,26 @@
+; Copyright (c) 2026 Lorenzooone
+
+; Game Boy link, passive: the Game Boy clocks SCK (GPIO 0) and the adapter answers every transfer.
+; in pins: SIN, out pins: SOUT, both shifting MSB first. Y holds the bits per transfer minus 2.
+; The CPU puts each next byte at the top of the TX word. If it is late, `pull noblock` copies X,
+; which the bit loop left at all ones, so the Game Boy reads 0xFF.
+; Clock divider 3: each [4] lets the line settle for about 100 ns after an SCK edge.
+
+.program gb_link_passive
+
+.wrap_target
+    wait 0 gpio 0 [4]               ; falling edge: a transfer starts
+    pull noblock
+    mov x, y
+    out pins, 1                     ; first bit
+    wait 1 gpio 0 [4]               ; rising edge
+bitloop:
+    in pins, 1
+    wait 0 gpio 0 [4]
+    out pins, 1
+    wait 1 gpio 0 [4]
+    jmp x-- bitloop
+    in pins, 1
+    push noblock
+    irq 2                           ; CPU: read the byte, put the next one
+.wrap

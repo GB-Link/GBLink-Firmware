@@ -1,0 +1,53 @@
+.program pio_slave_ereader
+
+; set pins:  SD_GBC | SD_GBA | SO | SI | SC   (5 pins from SC)
+; out/in:    SD_GBC | SD_GBA                  (2 pins from SD_GBA, GP3 = bit 0)
+; e-Reader child: SO is held low on the GPIO by the CPU, not by the PIO, so it stays low across program reloads.
+; The GBA is the parent; we answer with the other players' words right after the GBA's word.
+; SD is driven only on the pin the GBA's start bit came in on, and only after a stop bit on both
+; pins: a pin that is stuck low (no cable, partner powering off) never starts or answers a transfer.
+
+.define PREP_NEXT_TRANSMISSION_FLAG 0
+.define RX_TX_DONE_FLAG 1
+
+.wrap_target
+    set pins, 0b11000                       ; SD high once driven
+    set pindirs, 0b00000                    ; SC, SI, SO and both SD pins input (SO is driven low by the GPIO)
+    set x, 15
+wait_idle:
+    mov isr, ~null
+    in pins, 2
+    mov y, ~isr
+    jmp y-- wait_idle                       ; until both SD pins are high
+wait_start:
+    in pins, 2                              ; ISR stays all ones while both pins are high
+    mov y, ~isr
+    jmp !y wait_start                       ; y = the pin the start bit came in on
+    irq PREP_NEXT_TRANSMISSION_FLAG [20]    ; CPU: put seat and tx words; first sample in the middle of bit 0
+receive_bit:
+    in pins, 2 [14]
+    jmp x-- receive_bit
+    push
+    mov isr, ~null                          ; stop bit
+    in pins, 2
+    mov x, ~isr
+    jmp !x drive
+    mov y, null                             ; no stop bit on both pins: SD stays released
+drive:
+    pull                                    ; seat: not used, our words always follow the GBA's
+    mov osr, y
+    out pindirs, 2 [27]                     ; SD output on the start bit's pin, pause before our first word
+transmit:
+    mov x, status
+    jmp x-- done                            ; no words left
+    pull noblock
+    set pins, 0b00000 [15]                  ; start bit
+transmit_bit:
+    out pins, 2 [14]
+    jmp !osre transmit_bit
+    set pins, 0b11000 [17]                  ; stop bit
+    jmp transmit [31]
+done:
+    irq RX_TX_DONE_FLAG [31]                ; CPU: read RX, put gap | window
+    pull                                    ; gap | window: not used by the slave
+.wrap
